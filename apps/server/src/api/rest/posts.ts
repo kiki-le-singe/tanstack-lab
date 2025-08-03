@@ -32,30 +32,29 @@ postRoutes.get('/',
         conditions.push(eq(posts.categoryId, categoryId));
       }
 
-      const postList = await db.select({
-        id: posts.id,
-        title: posts.title,
-        content: posts.content,
-        published: posts.published,
-        createdAt: posts.createdAt,
-        author: {
-          id: users.id,
-          name: users.name,
-          avatarUrl: users.avatarUrl,
+      // Modern relational query - cleaner and more performant
+      const postList = await db.query.posts.findMany({
+        with: {
+          author: {
+            columns: {
+              id: true,
+              name: true,
+              avatarUrl: true,
+            },
+          },
+          category: {
+            columns: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
         },
-        category: {
-          id: categories.id,
-          name: categories.name,
-          slug: categories.slug,
-        }
-      })
-      .from(posts)
-      .leftJoin(users, eq(posts.authorId, users.id))
-      .leftJoin(categories, eq(posts.categoryId, categories.id))
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .limit(limit)
-      .offset(offset)
-      .orderBy(desc(posts.createdAt));
+        where: conditions.length > 0 ? and(...conditions) : undefined,
+        limit,
+        offset,
+        orderBy: [desc(posts.createdAt)],
+      });
 
       return c.json({
         posts: postList,
@@ -77,55 +76,44 @@ postRoutes.get('/:id', zValidator('param', uuidParamSchema), async (c) => {
   const { id } = c.req.valid('param');
 
   try {
-    const post = await db.select({
-      id: posts.id,
-      title: posts.title,
-      content: posts.content,
-      published: posts.published,
-      createdAt: posts.createdAt,
-      author: {
-        id: users.id,
-        name: users.name,
-        avatarUrl: users.avatarUrl,
+    // Single optimized query with all relationships - much more efficient!
+    const post = await db.query.posts.findFirst({
+      where: eq(posts.id, id),
+      with: {
+        author: {
+          columns: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+        category: {
+          columns: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+        comments: {
+          with: {
+            author: {
+              columns: {
+                id: true,
+                name: true,
+                avatarUrl: true,
+              },
+            },
+          },
+          orderBy: [comments.createdAt],
+        },
       },
-      category: {
-        id: categories.id,
-        name: categories.name,
-        slug: categories.slug,
-      }
-    })
-    .from(posts)
-    .leftJoin(users, eq(posts.authorId, users.id))
-    .leftJoin(categories, eq(posts.categoryId, categories.id))
-    .where(eq(posts.id, id))
-    .limit(1);
+    });
 
-    if (post.length === 0) {
+    if (!post) {
       return c.json({ error: 'Post not found' }, 404);
     }
 
-    // Get comments for this post
-    const postComments = await db.select({
-      id: comments.id,
-      content: comments.content,
-      createdAt: comments.createdAt,
-      author: {
-        id: users.id,
-        name: users.name,
-        avatarUrl: users.avatarUrl,
-      }
-    })
-    .from(comments)
-    .leftJoin(users, eq(comments.authorId, users.id))
-    .where(eq(comments.postId, id))
-    .orderBy(comments.createdAt);
-
-    return c.json({ 
-      post: { 
-        ...post[0], 
-        comments: postComments 
-      } 
-    });
+    return c.json({ post });
   } catch (error) {
     console.error('Error fetching post:', error);
     return c.json({ error: 'Failed to fetch post' }, 500);

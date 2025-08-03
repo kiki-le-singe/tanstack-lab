@@ -347,76 +347,108 @@ export const resolvers = {
     },
   },
 
-  // Field resolvers for relationships
+  // Optimized field resolvers using relational queries
   User: {
     posts: async (parent: any) => {
-      return await db.select()
-        .from(posts)
-        .where(eq(posts.authorId, parent.id))
-        .orderBy(desc(posts.createdAt));
+      return await db.query.posts.findMany({
+        where: eq(posts.authorId, parent.id),
+        orderBy: [desc(posts.createdAt)],
+        with: {
+          category: true, // Include category data in case it's requested
+        },
+      });
     },
 
     comments: async (parent: any) => {
-      return await db.select()
-        .from(comments)
-        .where(eq(comments.authorId, parent.id))
-        .orderBy(desc(comments.createdAt));
+      return await db.query.comments.findMany({
+        where: eq(comments.authorId, parent.id),
+        orderBy: [desc(comments.createdAt)],
+        with: {
+          post: {
+            columns: { id: true, title: true }, // Basic post info
+          },
+        },
+      });
     },
   },
 
   Category: {
     posts: async (parent: any) => {
-      return await db.select()
-        .from(posts)
-        .where(eq(posts.categoryId, parent.id))
-        .orderBy(desc(posts.createdAt));
+      return await db.query.posts.findMany({
+        where: eq(posts.categoryId, parent.id),
+        orderBy: [desc(posts.createdAt)],
+        with: {
+          author: {
+            columns: { id: true, name: true, avatarUrl: true },
+          },
+        },
+      });
     },
   },
 
   Post: {
     author: async (parent: any) => {
-      const author = await db.select()
-        .from(users)
-        .where(eq(users.id, parent.authorId))
-        .limit(1);
+      // Return cached author if already loaded, otherwise query
+      if (parent.author && parent.author.id === parent.authorId) {
+        return parent.author;
+      }
       
-      return author[0];
+      return await db.query.users.findFirst({
+        where: eq(users.id, parent.authorId),
+      });
     },
 
     category: async (parent: any) => {
-      const category = await db.select()
-        .from(categories)
-        .where(eq(categories.id, parent.categoryId))
-        .limit(1);
+      // Return cached category if already loaded, otherwise query  
+      if (parent.category && parent.category.id === parent.categoryId) {
+        return parent.category;
+      }
       
-      return category[0];
+      return await db.query.categories.findFirst({
+        where: eq(categories.id, parent.categoryId),
+      });
     },
 
     comments: async (parent: any) => {
-      return await db.select()
-        .from(comments)
-        .where(eq(comments.postId, parent.id))
-        .orderBy(comments.createdAt);
+      return await db.query.comments.findMany({
+        where: eq(comments.postId, parent.id),
+        orderBy: [comments.createdAt],
+        with: {
+          author: {
+            columns: { id: true, name: true, avatarUrl: true },
+          },
+        },
+      });
     },
   },
 
   Comment: {
     post: async (parent: any) => {
-      const post = await db.select()
-        .from(posts)
-        .where(eq(posts.id, parent.postId))
-        .limit(1);
+      // Return cached post if already loaded, otherwise query
+      if (parent.post && parent.post.id === parent.postId) {
+        return parent.post;
+      }
       
-      return post[0];
+      return await db.query.posts.findFirst({
+        where: eq(posts.id, parent.postId),
+        with: {
+          author: {
+            columns: { id: true, name: true, avatarUrl: true },
+          },
+          category: true,
+        },
+      });
     },
 
     author: async (parent: any) => {
-      const author = await db.select()
-        .from(users)
-        .where(eq(users.id, parent.authorId))
-        .limit(1);
+      // Return cached author if already loaded, otherwise query
+      if (parent.author && parent.author.id === parent.authorId) {
+        return parent.author;
+      }
       
-      return author[0];
+      return await db.query.users.findFirst({
+        where: eq(users.id, parent.authorId),
+      });
     },
   },
 };

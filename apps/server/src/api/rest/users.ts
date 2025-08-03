@@ -1,13 +1,13 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { db, users } from '@/db/index.js';
+import { db, users, posts, comments } from '@/db/index.js';
 import { 
   createUserSchema, 
   updateUserSchema, 
   uuidParamSchema,
   paginationSchema 
 } from '@/schemas/validation.js';
-import { eq } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 
 const userRoutes = new Hono();
 
@@ -17,14 +17,28 @@ userRoutes.get('/', zValidator('query', paginationSchema), async (c) => {
   const offset = (page - 1) * limit;
 
   try {
-    const userList = await db.select()
-      .from(users)
-      .limit(limit)
-      .offset(offset)
-      .orderBy(users.createdAt);
+    // Modern relational query with post counts
+    const userList = await db.query.users.findMany({
+      limit,
+      offset,
+      orderBy: [users.createdAt],
+      with: {
+        posts: {
+          columns: { id: true }, // Only get IDs for counting
+          where: eq(posts.published, true), // Only published posts
+        },
+      },
+    });
+
+    // Transform to include post count
+    const usersWithCounts = userList.map(user => ({
+      ...user,
+      postCount: user.posts.length,
+      posts: undefined, // Remove the posts array, just keep the count
+    }));
 
     return c.json({
-      users: userList,
+      users: usersWithCounts,
       pagination: {
         page,
         limit,
@@ -37,21 +51,39 @@ userRoutes.get('/', zValidator('query', paginationSchema), async (c) => {
   }
 });
 
-// GET /users/:id - Get user by ID
+// GET /users/:id - Get user by ID with posts and comments
 userRoutes.get('/:id', zValidator('param', uuidParamSchema), async (c) => {
   const { id } = c.req.valid('param');
 
   try {
-    const user = await db.select()
-      .from(users)
-      .where(eq(users.id, id))
-      .limit(1);
+    const user = await db.query.users.findFirst({
+      where: eq(users.id, id),
+      with: {
+        posts: {
+          with: {
+            category: {
+              columns: { id: true, name: true, slug: true },
+            },
+          },
+          orderBy: [desc(posts.createdAt)],
+        },
+        comments: {
+          with: {
+            post: {
+              columns: { id: true, title: true },
+            },
+          },
+          orderBy: [desc(comments.createdAt)],
+          limit: 10, // Limit recent comments
+        },
+      },
+    });
 
-    if (user.length === 0) {
+    if (!user) {
       return c.json({ error: 'User not found' }, 404);
     }
 
-    return c.json({ user: user[0] });
+    return c.json({ user });
   } catch (error) {
     console.error('Error fetching user:', error);
     return c.json({ error: 'Failed to fetch user' }, 500);
