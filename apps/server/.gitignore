@@ -1,0 +1,19 @@
+# Server-specific ignores
+# (Main .gitignore at project root covers most cases)
+
+# Local environment overrides (beyond the main .env)
+.env.server
+.env.server.local
+.env.override
+
+# Development artifacts
+debug.log
+*.log.local
+
+# Server-specific temp files
+uploads/
+temp-files/
+tmp-*
+
+# Note: drizzle/ migrations SHOULD be tracked in git
+# Note: .env files are ignored by root .gitignore
