@@ -1,9 +1,13 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { restApi } from '@/api/rest/index.js';
 import { graphqlServer } from '@/api/graphql/index.js';
+import { getPackageVersion, getCurrentTimestamp } from '@/utils/index.js';
 
 // Create main Hono app
 const app = new Hono();
@@ -19,13 +23,13 @@ app.use('*', cors({
 app.get('/', (c) => {
   return c.json({
     message: 'TanStack Lab API Server',
-    version: '1.0.0',
+    version: getPackageVersion('./package.json'),
     endpoints: {
       rest: '/api',
       graphql: '/graphql',
       health: '/health',
     },
-    timestamp: new Date().toISOString(),
+    timestamp: getCurrentTimestamp(),
   });
 });
 
@@ -34,7 +38,7 @@ app.get('/health', (c) => {
   return c.json({
     status: 'healthy',
     uptime: process.uptime(),
-    timestamp: new Date().toISOString(),
+    timestamp: getCurrentTimestamp(),
   });
 });
 
@@ -53,7 +57,7 @@ app.all('/graphql', async (c) => {
     headers: {
       'Content-Type': response.headers.get('Content-Type') || 'application/json',
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     },
   });
