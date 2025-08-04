@@ -1,5 +1,5 @@
-import { pgTable, uuid, text, timestamp, boolean } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+import { boolean, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 // Users table
 export const users = pgTable('users', {
@@ -22,8 +22,12 @@ export const posts = pgTable('posts', {
   title: text('title').notNull(),
   content: text('content').notNull(),
   published: boolean('published').default(false).notNull(),
-  authorId: uuid('author_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  categoryId: uuid('category_id').notNull().references(() => categories.id, { onDelete: 'cascade' }),
+  authorId: uuid('author_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  categoryId: uuid('category_id')
+    .notNull()
+    .references(() => categories.id, { onDelete: 'cascade' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -31,8 +35,12 @@ export const posts = pgTable('posts', {
 export const comments = pgTable('comments', {
   id: uuid('id').primaryKey().defaultRandom(),
   content: text('content').notNull(),
-  postId: uuid('post_id').notNull().references(() => posts.id, { onDelete: 'cascade' }),
-  authorId: uuid('author_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  postId: uuid('post_id')
+    .notNull()
+    .references(() => posts.id, { onDelete: 'cascade' }),
+  authorId: uuid('author_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { db, comments, users } from '@/db/index.js';
-import { 
-  createCommentSchema, 
-  updateCommentSchema, 
+import { db, comments } from '@/db/index.js';
+import {
+  createCommentSchema,
+  updateCommentSchema,
   uuidParamSchema,
-  paginationSchema 
+  paginationSchema,
 } from '@/schemas/validation.js';
 import { eq, desc } from 'drizzle-orm';
 
@@ -80,9 +80,7 @@ commentRoutes.post('/', zValidator('json', createCommentSchema), async (c) => {
   const commentData = c.req.valid('json');
 
   try {
-    const [newComment] = await db.insert(comments)
-      .values(commentData)
-      .returning();
+    const [newComment] = await db.insert(comments).values(commentData).returning();
 
     return c.json({ comment: newComment }, 201);
   } catch (error) {
@@ -92,7 +90,8 @@ commentRoutes.post('/', zValidator('json', createCommentSchema), async (c) => {
 });
 
 // PUT /comments/:id - Update comment
-commentRoutes.put('/:id', 
+commentRoutes.put(
+  '/:id',
   zValidator('param', uuidParamSchema),
   zValidator('json', updateCommentSchema),
   async (c) => {
@@ -100,7 +99,8 @@ commentRoutes.put('/:id',
     const updateData = c.req.valid('json');
 
     try {
-      const [updatedComment] = await db.update(comments)
+      const [updatedComment] = await db
+        .update(comments)
         .set(updateData)
         .where(eq(comments.id, id))
         .returning();
@@ -114,7 +114,7 @@ commentRoutes.put('/:id',
       console.error('Error updating comment:', error);
       return c.json({ error: 'Failed to update comment' }, 500);
     }
-  }
+  },
 );
 
 // DELETE /comments/:id - Delete comment
@@ -122,9 +122,7 @@ commentRoutes.delete('/:id', zValidator('param', uuidParamSchema), async (c) => 
   const { id } = c.req.valid('param');
 
   try {
-    const [deletedComment] = await db.delete(comments)
-      .where(eq(comments.id, id))
-      .returning();
+    const [deletedComment] = await db.delete(comments).where(eq(comments.id, id)).returning();
 
     if (!deletedComment) {
       return c.json({ error: 'Comment not found' }, 404);

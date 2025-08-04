@@ -1,57 +1,107 @@
 import dotenv from 'dotenv';
+
 dotenv.config();
 
 import { serve } from '@hono/node-server';
+import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { logger } from 'hono/logger';
-import { restApi } from '@/api/rest/index.js';
 import { graphqlServer } from '@/api/graphql/index.js';
-import { getPackageVersion, getCurrentTimestamp } from '@/utils/index.js';
+import { restApi } from '@/api/rest/index.js';
+import { db } from '@/db/index.js';
+import { config, isDevelopment } from '@/lib/config.js';
+import {
+  auth,
+  createRateLimiter,
+  enhancedLogger,
+  requestId,
+  sanitizeInput,
+  securityHeaders,
+} from '@/lib/middleware.js';
+import { ApiResponse } from '@/lib/response.js';
+import { getPackageVersion } from '@/utils/index.js';
 
 // Create main Hono app
 const app = new Hono();
 
-// Middleware
-app.use('*', logger());
-app.use('*', cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173'],
-  credentials: true,
-}));
+// Enhanced middleware stack
+app.use('*', requestId);
+app.use('*', enhancedLogger);
+app.use('*', securityHeaders);
+app.use('*', createRateLimiter());
+app.use(
+  '*',
+  cors({
+    origin: isDevelopment
+      ? ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:4173']
+      : [], // Configure production origins as needed
+    credentials: true,
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization', 'x-request-id'],
+  }),
+);
+app.use('*', sanitizeInput);
+app.use('*', auth);
 
 // Root endpoint
 app.get('/', (c) => {
-  return c.json({
+  return ApiResponse.success(c, {
     message: 'TanStack Lab API Server',
     version: getPackageVersion('./package.json'),
+    environment: config.NODE_ENV,
     endpoints: {
       rest: '/api',
       graphql: '/graphql',
       health: '/health',
     },
-    timestamp: getCurrentTimestamp(),
   });
 });
 
-// Health check
-app.get('/health', (c) => {
-  return c.json({
-    status: 'healthy',
-    uptime: process.uptime(),
-    timestamp: getCurrentTimestamp(),
-  });
+// Enhanced health check with database connectivity
+app.get('/health', async (c) => {
+  const startTime = Date.now();
+
+  try {
+    // Test database connection
+    await db.execute(sql`SELECT 1`);
+    const responseTime = Date.now() - startTime;
+
+    return ApiResponse.success(c, {
+      status: 'healthy',
+      services: {
+        database: 'connected',
+        api: 'operational',
+      },
+      uptime: process.uptime(),
+      responseTime: `${responseTime}ms`,
+      environment: config.NODE_ENV,
+      version: getPackageVersion('./package.json'),
+    });
+  } catch (error) {
+    const responseTime = Date.now() - startTime;
+
+    return ApiResponse.error(c, 'Service unhealthy', 503, {
+      services: {
+        database: 'disconnected',
+        api: 'operational',
+      },
+      uptime: process.uptime(),
+      responseTime: `${responseTime}ms`,
+      error: isDevelopment ? (error as Error).message : 'Database connection failed',
+    });
+  }
 });
 
 // Mount REST API at /api
 app.route('/api', restApi);
 
-// Mount GraphQL API at /graphql
+// Mount GraphQL API at /graphql - handle all methods
 app.all('/graphql', async (c) => {
   const response = await graphqlServer.fetch(c.req.raw);
-  
+
   // Return the response directly from GraphQL Yoga
   const body = await response.text();
-  
+
   return new Response(body, {
     status: response.status,
     headers: {
@@ -65,26 +115,57 @@ app.all('/graphql', async (c) => {
 
 // 404 handler
 app.notFound((c) => {
-  return c.json({ error: 'Not found' }, 404);
+  return ApiResponse.error(c, `Endpoint not found: ${c.req.method} ${c.req.path}`, 404);
 });
 
 // Error handler
 app.onError((err, c) => {
-  console.error('Server error:', err);
-  return c.json({ error: 'Internal server error' }, 500);
+  console.error('Server error:', {
+    message: err.message,
+    stack: isDevelopment ? err.stack : undefined,
+    path: c.req.path,
+    method: c.req.method,
+  });
+
+  return ApiResponse.error(
+    c,
+    'Internal server error',
+    500,
+    isDevelopment ? { error: err.message, stack: err.stack } : undefined,
+  );
 });
 
 // Start server
-const port = Number(process.env.PORT) || 3001;
+const port = config.PORT;
 
 console.log(`🚀 Server starting on port ${port}...`);
 console.log(`📊 REST API: http://localhost:${port}/api`);
 console.log(`🔍 GraphQL: http://localhost:${port}/graphql`);
 console.log(`💚 Health check: http://localhost:${port}/health`);
+console.log(`🛡️  Security: Rate limiting, sanitization, security headers enabled`);
 
-serve({
+const server = serve({
   fetch: app.fetch,
   port,
 });
 
 console.log(`✅ Server running on http://localhost:${port}`);
+
+// Graceful shutdown handling
+const gracefulShutdown = (signal: string) => {
+  console.log(`\n🛑 Received ${signal}, shutting down gracefully...`);
+
+  server.close(() => {
+    console.log('✅ Server closed successfully');
+    process.exit(0);
+  });
+
+  // Force close after 10 seconds
+  setTimeout(() => {
+    console.log('❌ Force closing server after timeout');
+    process.exit(1);
+  }, 10000);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));

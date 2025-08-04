@@ -1,75 +1,72 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { db, posts, comments } from '@/db/index.js';
-import { 
-  createPostSchema, 
-  updatePostSchema, 
+import {
+  createPostSchema,
+  updatePostSchema,
   uuidParamSchema,
   paginationSchema,
-  postFiltersSchema 
+  postFiltersSchema,
 } from '@/schemas/validation.js';
 import { eq, and, desc } from 'drizzle-orm';
 
 const postRoutes = new Hono();
 
 // GET /posts - List posts with pagination and filters
-postRoutes.get('/', 
-  zValidator('query', paginationSchema.merge(postFiltersSchema)), 
-  async (c) => {
-    const { page, limit, published, authorId, categoryId, categorySlug } = c.req.valid('query');
-    const offset = (page - 1) * limit;
+postRoutes.get('/', zValidator('query', paginationSchema.merge(postFiltersSchema)), async (c) => {
+  const { page, limit, published, authorId, categoryId } = c.req.valid('query');
+  const offset = (page - 1) * limit;
 
-    try {
-      // Build query conditions
-      const conditions = [];
-      if (published !== undefined) {
-        conditions.push(eq(posts.published, published));
-      }
-      if (authorId) {
-        conditions.push(eq(posts.authorId, authorId));
-      }
-      if (categoryId) {
-        conditions.push(eq(posts.categoryId, categoryId));
-      }
-
-      // Modern relational query - cleaner and more performant
-      const postList = await db.query.posts.findMany({
-        with: {
-          author: {
-            columns: {
-              id: true,
-              name: true,
-              avatarUrl: true,
-            },
-          },
-          category: {
-            columns: {
-              id: true,
-              name: true,
-              slug: true,
-            },
-          },
-        },
-        where: conditions.length > 0 ? and(...conditions) : undefined,
-        limit,
-        offset,
-        orderBy: [desc(posts.createdAt)],
-      });
-
-      return c.json({
-        posts: postList,
-        pagination: {
-          page,
-          limit,
-          hasMore: postList.length === limit,
-        },
-      });
-    } catch (error) {
-      console.error('Error fetching posts:', error);
-      return c.json({ error: 'Failed to fetch posts' }, 500);
+  try {
+    // Build query conditions
+    const conditions = [];
+    if (published !== undefined) {
+      conditions.push(eq(posts.published, published));
     }
+    if (authorId) {
+      conditions.push(eq(posts.authorId, authorId));
+    }
+    if (categoryId) {
+      conditions.push(eq(posts.categoryId, categoryId));
+    }
+
+    // Modern relational query - cleaner and more performant
+    const postList = await db.query.posts.findMany({
+      with: {
+        author: {
+          columns: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+        category: {
+          columns: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+      },
+      where: conditions.length > 0 ? and(...conditions) : undefined,
+      limit,
+      offset,
+      orderBy: [desc(posts.createdAt)],
+    });
+
+    return c.json({
+      posts: postList,
+      pagination: {
+        page,
+        limit,
+        hasMore: postList.length === limit,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching posts:', error);
+    return c.json({ error: 'Failed to fetch posts' }, 500);
   }
-);
+});
 
 // GET /posts/:id - Get post by ID with author, category, and comments
 postRoutes.get('/:id', zValidator('param', uuidParamSchema), async (c) => {
@@ -125,9 +122,7 @@ postRoutes.post('/', zValidator('json', createPostSchema), async (c) => {
   const postData = c.req.valid('json');
 
   try {
-    const [newPost] = await db.insert(posts)
-      .values(postData)
-      .returning();
+    const [newPost] = await db.insert(posts).values(postData).returning();
 
     return c.json({ post: newPost }, 201);
   } catch (error) {
@@ -137,7 +132,8 @@ postRoutes.post('/', zValidator('json', createPostSchema), async (c) => {
 });
 
 // PUT /posts/:id - Update post
-postRoutes.put('/:id', 
+postRoutes.put(
+  '/:id',
   zValidator('param', uuidParamSchema),
   zValidator('json', updatePostSchema),
   async (c) => {
@@ -145,7 +141,8 @@ postRoutes.put('/:id',
     const updateData = c.req.valid('json');
 
     try {
-      const [updatedPost] = await db.update(posts)
+      const [updatedPost] = await db
+        .update(posts)
         .set(updateData)
         .where(eq(posts.id, id))
         .returning();
@@ -159,7 +156,7 @@ postRoutes.put('/:id',
       console.error('Error updating post:', error);
       return c.json({ error: 'Failed to update post' }, 500);
     }
-  }
+  },
 );
 
 // DELETE /posts/:id - Delete post
@@ -167,9 +164,7 @@ postRoutes.delete('/:id', zValidator('param', uuidParamSchema), async (c) => {
   const { id } = c.req.valid('param');
 
   try {
-    const [deletedPost] = await db.delete(posts)
-      .where(eq(posts.id, id))
-      .returning();
+    const [deletedPost] = await db.delete(posts).where(eq(posts.id, id)).returning();
 
     if (!deletedPost) {
       return c.json({ error: 'Post not found' }, 404);

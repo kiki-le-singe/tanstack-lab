@@ -14,7 +14,8 @@ export const updateUserSchema = z.object({
 // Category schemas
 export const createCategorySchema = z.object({
   name: z.string().min(1, 'Name is required').max(50, 'Name too long'),
-  slug: z.string()
+  slug: z
+    .string()
     .min(1, 'Slug is required')
     .max(50, 'Slug too long')
     .regex(/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens'),
@@ -22,7 +23,8 @@ export const createCategorySchema = z.object({
 
 export const updateCategorySchema = z.object({
   name: z.string().min(1, 'Name is required').max(50, 'Name too long').optional(),
-  slug: z.string()
+  slug: z
+    .string()
     .min(1, 'Slug is required')
     .max(50, 'Slug too long')
     .regex(/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens')

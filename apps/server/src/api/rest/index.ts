@@ -3,15 +3,16 @@ import { userRoutes } from './users.js';
 import { postRoutes } from './posts.js';
 import { categoryRoutes } from './categories.js';
 import { commentRoutes } from './comments.js';
+import { ApiResponse } from '@/lib/response.js';
 
 const restApi = new Hono();
 
-// Health check endpoint
+// REST API health check endpoint
 restApi.get('/health', (c) => {
-  return c.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(),
-    version: '1.0.0' 
+  return ApiResponse.success(c, {
+    status: 'ok',
+    api: 'REST API operational',
+    version: '1.0.0',
   });
 });
 
