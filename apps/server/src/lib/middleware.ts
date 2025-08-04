@@ -9,7 +9,7 @@ import { isDevelopment } from './config.js';
  * Initialize DOMPurify with JSDOM for server-side usage
  */
 const window = new JSDOM('').window;
-const purify = DOMPurify(window as any);
+const purify = DOMPurify(window);
 
 /**
  * Request ID middleware
@@ -74,39 +74,64 @@ export const sanitizeInput = async (c: Context, next: Next) => {
     c.set('sanitizedBody', sanitizedBody);
 
     await next();
-  } catch (error) {
+  } catch {
     // If JSON parsing fails, continue without sanitization
     await next();
   }
 };
 
 /**
- * Recursively sanitize an object
+ * Type representing valid JSON values that can be sanitized
  */
-function sanitizeObject(obj: any): any {
-  if (obj === null || obj === undefined) {
+type SanitizableValue =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | readonly SanitizableValue[]
+  | { readonly [K in string]: SanitizableValue };
+
+/**
+ * Recursively sanitize a JSON value to prevent XSS attacks
+ * @param obj - The value to sanitize
+ * @returns The sanitized value with the same structure
+ */
+function sanitizeObject(obj: SanitizableValue): SanitizableValue {
+  // Handle null and undefined values
+  if (obj == null) {
     return obj;
   }
 
+  // Handle primitive types
   if (typeof obj === 'string') {
     // Sanitize HTML content and trim whitespace
     return purify.sanitize(obj.trim());
   }
 
+  if (typeof obj === 'number' || typeof obj === 'boolean') {
+    return obj;
+  }
+
+  // Handle arrays
   if (Array.isArray(obj)) {
     return obj.map(sanitizeObject);
   }
 
-  if (typeof obj === 'object') {
-    const sanitized: any = {};
+  // Handle objects (must be last check)
+  if (typeof obj === 'object' && obj !== null) {
+    const sanitized: Record<string, SanitizableValue> = {};
+
     for (const [key, value] of Object.entries(obj)) {
-      // Sanitize both keys and values
-      const sanitizedKey = typeof key === 'string' ? purify.sanitize(key.trim()) : key;
+      // Sanitize object keys (they're always strings in JSON)
+      const sanitizedKey = purify.sanitize(key.trim());
       sanitized[sanitizedKey] = sanitizeObject(value);
     }
+
     return sanitized;
   }
 
+  // Fallback for any other type (should not happen with proper typing)
   return obj;
 }
 

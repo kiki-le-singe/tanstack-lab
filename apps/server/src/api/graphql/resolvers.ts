@@ -159,7 +159,10 @@ export const resolvers = {
       return post[0] || null;
     },
 
-    postsByCategory: async (_: unknown, { categoryId, page = 1, limit = 10 }: PostsByCategoryArgs) => {
+    postsByCategory: async (
+      _: unknown,
+      { categoryId, page = 1, limit = 10 }: PostsByCategoryArgs,
+    ) => {
       const offset = (page - 1) * limit;
       const postList = await db
         .select()
