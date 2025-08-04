@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { db, categories, posts, users } from '@/db/index.js';
+import { db, categories, posts } from '@/db/index.js';
 import { 
   createCategorySchema, 
   updateCategorySchema, 
@@ -17,11 +17,11 @@ categoryRoutes.get('/', zValidator('query', paginationSchema), async (c) => {
   const offset = (page - 1) * limit;
 
   try {
-    const categoryList = await db.select()
-      .from(categories)
-      .limit(limit)
-      .offset(offset)
-      .orderBy(categories.name);
+    const categoryList = await db.query.categories.findMany({
+      limit,
+      offset,
+      orderBy: [categories.name],
+    });
 
     return c.json({
       categories: categoryList,
@@ -42,16 +42,15 @@ categoryRoutes.get('/:id', zValidator('param', uuidParamSchema), async (c) => {
   const { id } = c.req.valid('param');
 
   try {
-    const category = await db.select()
-      .from(categories)
-      .where(eq(categories.id, id))
-      .limit(1);
+    const category = await db.query.categories.findFirst({
+      where: eq(categories.id, id),
+    });
 
-    if (category.length === 0) {
+    if (!category) {
       return c.json({ error: 'Category not found' }, 404);
     }
 
-    return c.json({ category: category[0] });
+    return c.json({ category });
   } catch (error) {
     console.error('Error fetching category:', error);
     return c.json({ error: 'Failed to fetch category' }, 500);
@@ -63,16 +62,15 @@ categoryRoutes.get('/slug/:slug', async (c) => {
   const slug = c.req.param('slug');
 
   try {
-    const category = await db.select()
-      .from(categories)
-      .where(eq(categories.slug, slug))
-      .limit(1);
+    const category = await db.query.categories.findFirst({
+      where: eq(categories.slug, slug),
+    });
 
-    if (category.length === 0) {
+    if (!category) {
       return c.json({ error: 'Category not found' }, 404);
     }
 
-    return c.json({ category: category[0] });
+    return c.json({ category });
   } catch (error) {
     console.error('Error fetching category:', error);
     return c.json({ error: 'Failed to fetch category' }, 500);
@@ -89,24 +87,21 @@ categoryRoutes.get('/:id/posts',
     const offset = (page - 1) * limit;
 
     try {
-      const categoryPosts = await db.select({
-        id: posts.id,
-        title: posts.title,
-        content: posts.content,
-        published: posts.published,
-        createdAt: posts.createdAt,
-        author: {
-          id: users.id,
-          name: users.name,
-          avatarUrl: users.avatarUrl,
-        }
-      })
-      .from(posts)
-      .leftJoin(users, eq(posts.authorId, users.id))
-      .where(eq(posts.categoryId, id))
-      .limit(limit)
-      .offset(offset)
-      .orderBy(desc(posts.createdAt));
+      const categoryPosts = await db.query.posts.findMany({
+        where: eq(posts.categoryId, id),
+        with: {
+          author: {
+            columns: {
+              id: true,
+              name: true,
+              avatarUrl: true,
+            },
+          },
+        },
+        limit,
+        offset,
+        orderBy: [desc(posts.createdAt)],
+      });
 
       return c.json({
         posts: categoryPosts,

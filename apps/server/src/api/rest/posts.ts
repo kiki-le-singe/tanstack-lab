@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { db, posts, users, categories, comments } from '@/db/index.js';
+import { db, posts, comments } from '@/db/index.js';
 import { 
   createPostSchema, 
   updatePostSchema, 

@@ -17,22 +17,20 @@ commentRoutes.get('/', zValidator('query', paginationSchema), async (c) => {
   const offset = (page - 1) * limit;
 
   try {
-    const commentList = await db.select({
-      id: comments.id,
-      content: comments.content,
-      postId: comments.postId,
-      createdAt: comments.createdAt,
-      author: {
-        id: users.id,
-        name: users.name,
-        avatarUrl: users.avatarUrl,
-      }
-    })
-    .from(comments)
-    .leftJoin(users, eq(comments.authorId, users.id))
-    .limit(limit)
-    .offset(offset)
-    .orderBy(desc(comments.createdAt));
+    const commentList = await db.query.comments.findMany({
+      with: {
+        author: {
+          columns: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+      },
+      limit,
+      offset,
+      orderBy: [desc(comments.createdAt)],
+    });
 
     return c.json({
       comments: commentList,
@@ -53,27 +51,24 @@ commentRoutes.get('/:id', zValidator('param', uuidParamSchema), async (c) => {
   const { id } = c.req.valid('param');
 
   try {
-    const comment = await db.select({
-      id: comments.id,
-      content: comments.content,
-      postId: comments.postId,
-      createdAt: comments.createdAt,
-      author: {
-        id: users.id,
-        name: users.name,
-        avatarUrl: users.avatarUrl,
-      }
-    })
-    .from(comments)
-    .leftJoin(users, eq(comments.authorId, users.id))
-    .where(eq(comments.id, id))
-    .limit(1);
+    const comment = await db.query.comments.findFirst({
+      where: eq(comments.id, id),
+      with: {
+        author: {
+          columns: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    });
 
-    if (comment.length === 0) {
+    if (!comment) {
       return c.json({ error: 'Comment not found' }, 404);
     }
 
-    return c.json({ comment: comment[0] });
+    return c.json({ comment });
   } catch (error) {
     console.error('Error fetching comment:', error);
     return c.json({ error: 'Failed to fetch comment' }, 500);
