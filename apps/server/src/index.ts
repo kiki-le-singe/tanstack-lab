@@ -18,7 +18,7 @@ import {
   sanitizeInput,
   securityHeaders,
 } from '@/lib/middleware.js';
-import { ApiResponse } from '@/lib/response.js';
+import { apiError, apiSuccess } from '@/lib/response.js';
 import { getPackageVersion } from '@/utils/index.js';
 
 // Create main Hono app
@@ -45,7 +45,7 @@ app.use('*', auth);
 
 // Root endpoint
 app.get('/', (c) => {
-  return ApiResponse.success(c, {
+  return apiSuccess(c, {
     message: 'TanStack Lab API Server',
     version: getPackageVersion('./package.json'),
     environment: config.NODE_ENV,
@@ -66,7 +66,7 @@ app.get('/health', async (c) => {
     await db.execute(sql`SELECT 1`);
     const responseTime = Date.now() - startTime;
 
-    return ApiResponse.success(c, {
+    return apiSuccess(c, {
       status: 'healthy',
       services: {
         database: 'connected',
@@ -80,7 +80,7 @@ app.get('/health', async (c) => {
   } catch (error) {
     const responseTime = Date.now() - startTime;
 
-    return ApiResponse.error(c, 'Service unhealthy', 503, {
+    return apiError(c, 'Service unhealthy', 503, {
       services: {
         database: 'disconnected',
         api: 'operational',
@@ -115,7 +115,7 @@ app.all('/graphql', async (c) => {
 
 // 404 handler
 app.notFound((c) => {
-  return ApiResponse.error(c, `Endpoint not found: ${c.req.method} ${c.req.path}`, 404);
+  return apiError(c, `Endpoint not found: ${c.req.method} ${c.req.path}`, 404);
 });
 
 // Error handler
@@ -127,7 +127,7 @@ app.onError((err, c) => {
     method: c.req.method,
   });
 
-  return ApiResponse.error(
+  return apiError(
     c,
     'Internal server error',
     500,

@@ -2,13 +2,13 @@ import { zValidator } from '@hono/zod-validator';
 import { desc, eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { categories, db, posts } from '@/db/index.js';
+import { apiCreated, apiError, apiSuccessWithPagination } from '@/lib/response.js';
 import {
   createCategorySchema,
   paginationSchema,
   updateCategorySchema,
   uuidParamSchema,
 } from '@/schemas/validation.js';
-import { ApiResponse } from '@/lib/response.js';
 
 const categoryRoutes = new Hono();
 
@@ -24,14 +24,14 @@ categoryRoutes.get('/', zValidator('query', paginationSchema), async (c) => {
       orderBy: [categories.name],
     });
 
-    return ApiResponse.successWithPagination(c, categoryList, {
+    return apiSuccessWithPagination(c, categoryList, {
       page,
       limit,
       hasMore: categoryList.length === limit,
     });
   } catch (error) {
     console.error('Error fetching categories:', error);
-    return ApiResponse.error(c, 'Could not retrieve categories from database', 500);
+    return apiError(c, 'Could not retrieve categories from database', 500);
   }
 });
 
@@ -124,7 +124,7 @@ categoryRoutes.post('/', zValidator('json', createCategorySchema), async (c) => 
   try {
     const [newCategory] = await db.insert(categories).values(categoryData).returning();
 
-    return ApiResponse.created(c, { category: newCategory });
+    return apiCreated(c, { category: newCategory });
   } catch (error) {
     console.error('Error creating category:', error);
     return c.json({ error: 'Failed to create category' }, 500);

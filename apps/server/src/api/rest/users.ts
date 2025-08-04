@@ -1,14 +1,20 @@
-import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { db, users, posts, comments } from '@/db/index.js';
+import { desc, eq } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { comments, db, posts, users } from '@/db/index.js';
+import {
+  apiCreated,
+  apiError,
+  apiNotFound,
+  apiSuccess,
+  apiSuccessWithPagination,
+} from '@/lib/response.js';
 import {
   createUserSchema,
+  paginationSchema,
   updateUserSchema,
   uuidParamSchema,
-  paginationSchema,
 } from '@/schemas/validation.js';
-import { eq, desc } from 'drizzle-orm';
-import { ApiResponse } from '@/lib/response.js';
 
 const userRoutes = new Hono();
 
@@ -38,14 +44,14 @@ userRoutes.get('/', zValidator('query', paginationSchema), async (c) => {
       posts: undefined, // Remove the posts array, just keep the count
     }));
 
-    return ApiResponse.successWithPagination(c, usersWithCounts, {
+    return apiSuccessWithPagination(c, usersWithCounts, {
       page,
       limit,
       hasMore: userList.length === limit,
     });
   } catch (error) {
     console.error('Error fetching users:', error);
-    return ApiResponse.error(c, 'Could not retrieve users from database', 500);
+    return apiError(c, 'Could not retrieve users from database', 500);
   }
 });
 
@@ -78,13 +84,13 @@ userRoutes.get('/:id', zValidator('param', uuidParamSchema), async (c) => {
     });
 
     if (!user) {
-      return ApiResponse.notFound(c, 'User');
+      return apiNotFound(c, 'User');
     }
 
-    return ApiResponse.success(c, { user });
+    return apiSuccess(c, { user });
   } catch (error) {
     console.error('Error fetching user:', error);
-    return ApiResponse.error(c, 'Could not retrieve user from database', 500);
+    return apiError(c, 'Could not retrieve user from database', 500);
   }
 });
 
@@ -95,10 +101,10 @@ userRoutes.post('/', zValidator('json', createUserSchema), async (c) => {
   try {
     const [newUser] = await db.insert(users).values(userData).returning();
 
-    return ApiResponse.created(c, { user: newUser });
+    return apiCreated(c, { user: newUser });
   } catch (error) {
     console.error('Error creating user:', error);
-    return ApiResponse.error(c, 'Could not create user', 500);
+    return apiError(c, 'Could not create user', 500);
   }
 });
 
@@ -119,13 +125,13 @@ userRoutes.put(
         .returning();
 
       if (!updatedUser) {
-        return ApiResponse.notFound(c, 'User');
+        return apiNotFound(c, 'User');
       }
 
-      return ApiResponse.success(c, { user: updatedUser });
+      return apiSuccess(c, { user: updatedUser });
     } catch (error) {
       console.error('Error updating user:', error);
-      return ApiResponse.error(c, 'Could not update user', 500);
+      return apiError(c, 'Could not update user', 500);
     }
   },
 );
@@ -138,13 +144,13 @@ userRoutes.delete('/:id', zValidator('param', uuidParamSchema), async (c) => {
     const [deletedUser] = await db.delete(users).where(eq(users.id, id)).returning();
 
     if (!deletedUser) {
-      return ApiResponse.notFound(c, 'User');
+      return apiNotFound(c, 'User');
     }
 
-    return ApiResponse.success(c, { message: 'User deleted successfully' });
+    return apiSuccess(c, { message: 'User deleted successfully' });
   } catch (error) {
     console.error('Error deleting user:', error);
-    return ApiResponse.error(c, 'Could not delete user', 500);
+    return apiError(c, 'Could not delete user', 500);
   }
 });
 
