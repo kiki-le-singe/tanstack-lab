@@ -3,16 +3,18 @@ import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { BaseAdapter } from './base.js';
 import * as schema from '../schemas/sqlite.js';
 
+type SqliteDatabase = ReturnType<typeof drizzle<typeof schema>>;
+
 /**
  * SQLite database adapter
  * Provides local database support for development and testing
  */
-export class SqliteAdapter extends BaseAdapter {
+export class SqliteAdapter extends BaseAdapter<SqliteDatabase, typeof schema> {
   readonly dialect = 'sqlite' as const;
   readonly type = 'sqlite' as const;
   readonly schema = schema;
 
-  private _db: ReturnType<typeof drizzle> | null = null;
+  private _db: SqliteDatabase | null = null;
   private _sqlite: Database.Database | null = null;
   private dbPath: string;
 
@@ -21,7 +23,7 @@ export class SqliteAdapter extends BaseAdapter {
     this.dbPath = dbPath;
   }
 
-  get db() {
+  get db(): SqliteDatabase {
     if (!this._db) {
       throw new Error('SQLite adapter not initialized. Call initialize() first.');
     }

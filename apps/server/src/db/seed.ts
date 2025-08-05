@@ -9,7 +9,7 @@ async function seed() {
   try {
     // Get database adapter
     const adapter = await getDatabase();
-    const db = adapter.db;
+    const db = adapter.db as any; // Type assertion for seed compatibility
     const { users, categories, posts, comments } = adapter.schema;
 
     console.log(`🔧 Using ${adapter.type} database (${adapter.dialect})`);

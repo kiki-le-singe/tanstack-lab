@@ -11,9 +11,9 @@ export type DatabaseType = 'neon' | 'sqlite';
  * Base database adapter interface
  * All database adapters must implement this interface
  */
-export interface DatabaseAdapter {
-  readonly db: any; // Drizzle database instance
-  readonly schema: any; // Database schema
+export interface DatabaseAdapter<TDatabase = unknown, TSchema = Record<string, unknown>> {
+  readonly db: TDatabase; // Drizzle database instance
+  readonly schema: TSchema; // Database schema
   readonly dialect: DatabaseDialect;
   readonly type: DatabaseType;
 

@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import { DatabaseFactory } from './adapters/index.js';
+import { createDatabaseAdapterFromEnvironment } from './adapters/index.js';
 import type { DatabaseAdapter } from './adapters/index.js';
 
 /**
@@ -16,7 +16,7 @@ let dbAdapter: DatabaseAdapter | null = null;
  */
 export async function getDatabase(): Promise<DatabaseAdapter> {
   if (!dbAdapter) {
-    dbAdapter = DatabaseFactory.createFromEnvironment();
+    dbAdapter = createDatabaseAdapterFromEnvironment();
     await dbAdapter.initialize();
 
     // Enhanced logging to make database selection very clear

@@ -32,13 +32,13 @@ userRoutes.get('/', zValidator('query', paginationSchema), async (c) => {
       with: {
         posts: {
           columns: { id: true }, // Only get IDs for counting
-          where: eq(posts.published, 1), // Only published posts (SQLite uses 1 for true)
+          where: eq(posts.published, true), // Only published posts
         },
       },
     });
 
     // Transform to include post count
-    const usersWithCounts = userList.map((user) => ({
+    const usersWithCounts = userList.map((user: any) => ({
       ...user,
       postCount: user.posts.length,
       posts: undefined, // Remove the posts array, just keep the count

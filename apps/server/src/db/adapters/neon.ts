@@ -4,16 +4,18 @@ import { sql } from 'drizzle-orm';
 import { BaseAdapter } from './base.js';
 import * as schema from '../schemas/postgresql.js';
 
+type NeonDatabase = ReturnType<typeof drizzle<typeof schema>>;
+
 /**
  * Neon PostgreSQL database adapter
  * Maintains compatibility with existing Neon implementation
  */
-export class NeonAdapter extends BaseAdapter {
+export class NeonAdapter extends BaseAdapter<NeonDatabase, typeof schema> {
   readonly dialect = 'postgresql' as const;
   readonly type = 'neon' as const;
   readonly schema = schema;
 
-  private _db: ReturnType<typeof drizzle> | null = null;
+  private _db: NeonDatabase | null = null;
   private connectionString: string;
 
   constructor(connectionString: string) {
@@ -21,7 +23,7 @@ export class NeonAdapter extends BaseAdapter {
     this.connectionString = connectionString;
   }
 
-  get db() {
+  get db(): NeonDatabase {
     if (!this._db) {
       throw new Error('Neon adapter not initialized. Call initialize() first.');
     }

@@ -4,9 +4,10 @@ import type { DatabaseAdapter, DatabaseDialect, DatabaseType } from './types.js'
  * Abstract base class for database adapters
  * Provides common functionality and enforces the adapter interface
  */
-export abstract class BaseAdapter implements DatabaseAdapter {
-  abstract readonly db: any;
-  abstract readonly schema: any;
+export abstract class BaseAdapter<TDatabase = unknown, TSchema = Record<string, unknown>> 
+  implements DatabaseAdapter<TDatabase, TSchema> {
+  abstract readonly db: TDatabase;
+  abstract readonly schema: TSchema;
   abstract readonly dialect: DatabaseDialect;
   abstract readonly type: DatabaseType;
 

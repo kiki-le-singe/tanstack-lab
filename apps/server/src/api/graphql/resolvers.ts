@@ -1,7 +1,7 @@
 import { GraphQLScalarType } from 'graphql';
 import { Kind } from 'graphql/language/index.js';
 import { db, users, categories, posts, comments } from '@/db/index.js';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import {
   createUserSchema,
   updateUserSchema,
@@ -90,17 +90,11 @@ export const resolvers = {
     // Users
     users: async (_: unknown, { page = 1, limit = 10 }: PaginationArgs) => {
       const offset = (page - 1) * limit;
-      const userList = await db
-        .select({
-          id: users.id,
-          name: users.name,
-          avatarUrl: users.avatarUrl,
-          createdAt: sql<number>`created_at`, // Use raw SQL to get integer directly
-        })
-        .from(users)
-        .limit(limit)
-        .offset(offset)
-        .orderBy(sql`created_at`);
+      const userList = await db.query.users.findMany({
+        limit,
+        offset,
+        orderBy: [users.createdAt],
+      });
 
       return {
         users: userList,
@@ -113,20 +107,19 @@ export const resolvers = {
     },
 
     user: async (_: unknown, { id }: IdArgs) => {
-      const user = await db.select().from(users).where(eq(users.id, id)).limit(1);
-
-      return user[0] || null;
+      return await db.query.users.findFirst({
+        where: eq(users.id, id),
+      });
     },
 
     // Categories
     categories: async (_: unknown, { page = 1, limit = 10 }: PaginationArgs) => {
       const offset = (page - 1) * limit;
-      const categoryList = await db
-        .select()
-        .from(categories)
-        .limit(limit)
-        .offset(offset)
-        .orderBy(categories.name);
+      const categoryList = await db.query.categories.findMany({
+        limit,
+        offset,
+        orderBy: [categories.name],
+      });
 
       return {
         categories: categoryList,
@@ -139,41 +132,43 @@ export const resolvers = {
     },
 
     category: async (_: unknown, { id }: IdArgs) => {
-      const category = await db.select().from(categories).where(eq(categories.id, id)).limit(1);
-
-      return category[0] || null;
+      return await db.query.categories.findFirst({
+        where: eq(categories.id, id),
+      });
     },
 
     categoryBySlug: async (_: unknown, { slug }: SlugArgs) => {
-      const category = await db.select().from(categories).where(eq(categories.slug, slug)).limit(1);
-
-      return category[0] || null;
+      return await db.query.categories.findFirst({
+        where: eq(categories.slug, slug),
+      });
     },
 
     // Posts
     posts: async (_: unknown, { page = 1, limit = 10, filters }: PostsArgs) => {
       const offset = (page - 1) * limit;
 
-      // Build query conditions
-      const conditions = [];
-      if (filters?.published !== undefined) {
-        // Convert boolean to integer for SQLite compatibility
-        conditions.push(eq(posts.published, filters.published ? 1 : 0));
-      }
-      if (filters?.authorId) {
-        conditions.push(eq(posts.authorId, filters.authorId));
-      }
-      if (filters?.categoryId) {
-        conditions.push(eq(posts.categoryId, filters.categoryId));
+      // Build where condition for relational API
+      let whereCondition: any;
+      if (filters) {
+        const conditions = [];
+        if (filters.published !== undefined) {
+          conditions.push(eq(posts.published, filters.published));
+        }
+        if (filters.authorId) {
+          conditions.push(eq(posts.authorId, filters.authorId));
+        }
+        if (filters.categoryId) {
+          conditions.push(eq(posts.categoryId, filters.categoryId));
+        }
+        whereCondition = conditions.length > 0 ? and(...conditions) : undefined;
       }
 
-      const postList = await db
-        .select()
-        .from(posts)
-        .where(conditions.length > 0 ? and(...conditions) : undefined)
-        .limit(limit)
-        .offset(offset)
-        .orderBy(desc(posts.createdAt));
+      const postList = await db.query.posts.findMany({
+        where: whereCondition,
+        limit,
+        offset,
+        orderBy: [desc(posts.createdAt)],
+      });
 
       return {
         posts: postList,
@@ -186,9 +181,9 @@ export const resolvers = {
     },
 
     post: async (_: unknown, { id }: IdArgs) => {
-      const post = await db.select().from(posts).where(eq(posts.id, id)).limit(1);
-
-      return post[0] || null;
+      return await db.query.posts.findFirst({
+        where: eq(posts.id, id),
+      });
     },
 
     postsByCategory: async (
@@ -196,13 +191,12 @@ export const resolvers = {
       { categoryId, page = 1, limit = 10 }: PostsByCategoryArgs,
     ) => {
       const offset = (page - 1) * limit;
-      const postList = await db
-        .select()
-        .from(posts)
-        .where(eq(posts.categoryId, categoryId))
-        .limit(limit)
-        .offset(offset)
-        .orderBy(desc(posts.createdAt));
+      const postList = await db.query.posts.findMany({
+        where: eq(posts.categoryId, categoryId),
+        limit,
+        offset,
+        orderBy: [desc(posts.createdAt)],
+      });
 
       return {
         posts: postList,
@@ -217,12 +211,11 @@ export const resolvers = {
     // Comments
     comments: async (_: unknown, { page = 1, limit = 10 }: PaginationArgs) => {
       const offset = (page - 1) * limit;
-      const commentList = await db
-        .select()
-        .from(comments)
-        .limit(limit)
-        .offset(offset)
-        .orderBy(desc(comments.createdAt));
+      const commentList = await db.query.comments.findMany({
+        limit,
+        offset,
+        orderBy: [desc(comments.createdAt)],
+      });
 
       return {
         comments: commentList,
@@ -235,9 +228,9 @@ export const resolvers = {
     },
 
     comment: async (_: unknown, { id }: IdArgs) => {
-      const comment = await db.select().from(comments).where(eq(comments.id, id)).limit(1);
-
-      return comment[0] || null;
+      return await db.query.comments.findFirst({
+        where: eq(comments.id, id),
+      });
     },
   },
 
