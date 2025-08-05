@@ -36,11 +36,13 @@ export class NeonAdapter extends BaseAdapter {
       const sql = neon(this.connectionString);
       this._db = drizzle(sql, { schema });
       this._initialized = true;
-      
+
       // Test connection
       await this.health();
     } catch (error) {
-      throw new Error(`Failed to initialize Neon adapter: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to initialize Neon adapter: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     }
   }
 
@@ -51,7 +53,7 @@ export class NeonAdapter extends BaseAdapter {
     try {
       this.ensureInitialized();
       // Simple query to test connection
-      await this._db!.execute(sql`SELECT 1 as health`);
+      await this._db?.execute(sql`SELECT 1 as health`);
       return true;
     } catch (error) {
       console.error('Neon health check failed:', error);

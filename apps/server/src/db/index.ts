@@ -18,10 +18,10 @@ export async function getDatabase(): Promise<DatabaseAdapter> {
   if (!dbAdapter) {
     dbAdapter = DatabaseFactory.createFromEnvironment();
     await dbAdapter.initialize();
-    
+
     // Enhanced logging to make database selection very clear
     console.log('');
-    console.log('=' .repeat(60));
+    console.log('='.repeat(60));
     console.log(`📊 DATABASE: ${dbAdapter.type.toUpperCase()} (${dbAdapter.dialect})`);
     if (dbAdapter.type === 'sqlite') {
       console.log('🏠 Running with LOCAL SQLite database');
@@ -30,10 +30,10 @@ export async function getDatabase(): Promise<DatabaseAdapter> {
       console.log('☁️  Running with NEON PostgreSQL database');
       console.log('🌐 Connected to cloud database');
     }
-    console.log('=' .repeat(60));
+    console.log('='.repeat(60));
     console.log('');
   }
-  
+
   return dbAdapter;
 }
 
@@ -69,14 +69,14 @@ let _schemaInstance: any = null;
  * Existing code can continue using `db` but it now auto-selects the database
  */
 export const db = new Proxy({} as any, {
-  get(target, prop) {
+  get(_target, prop) {
     if (!_dbInstance) {
       // Try to auto-initialize if not done yet
       console.warn('Database accessed before initialization. Auto-initializing...');
       throw new Error('Database not initialized. Call initializeDatabase() at app startup.');
     }
     return _dbInstance[prop];
-  }
+  },
 });
 
 /**

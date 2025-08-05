@@ -11,7 +11,7 @@ async function seed() {
     const adapter = await getDatabase();
     const db = adapter.db;
     const { users, categories, posts, comments } = adapter.schema;
-    
+
     console.log(`🔧 Using ${adapter.type} database (${adapter.dialect})`);
 
     // Clear existing data (in reverse order due to foreign keys)

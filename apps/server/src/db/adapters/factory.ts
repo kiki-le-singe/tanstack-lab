@@ -17,10 +17,10 @@ export class DatabaseFactory {
           throw new Error('Connection string is required for Neon adapter');
         }
         return new NeonAdapter(config.connectionString);
-      
+
       case 'sqlite':
         return new SqliteAdapter(config.sqlitePath);
-      
+
       default:
         throw new Error(`Unknown database type: ${(config as any).type}`);
     }
@@ -35,13 +35,13 @@ export class DatabaseFactory {
 
     // Use validated configuration
     let sqlitePath = './dev.db';
-    
+
     // If using SQLite and DATABASE_URL is file:// format, extract the path
     if (DATABASE_TYPE === 'sqlite' && DATABASE_URL.startsWith('file:')) {
       sqlitePath = DATABASE_URL.replace('file:', '');
     }
-    
-    return this.create({
+
+    return DatabaseFactory.create({
       type: DATABASE_TYPE,
       connectionString: DATABASE_URL,
       sqlitePath,

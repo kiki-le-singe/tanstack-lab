@@ -8,22 +8,30 @@ import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 // Users table - SQLite version
 export const users = sqliteTable('users', {
-  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
   name: text('name').notNull(),
   avatarUrl: text('avatar_url'),
-  createdAt: integer('created_at').$defaultFn(() => Math.floor(Date.now() / 1000)).notNull(),
+  createdAt: integer('created_at')
+    .$defaultFn(() => Math.floor(Date.now() / 1000))
+    .notNull(),
 });
 
 // Categories table - SQLite version
 export const categories = sqliteTable('categories', {
-  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
 });
 
 // Posts table - SQLite version
 export const posts = sqliteTable('posts', {
-  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
   title: text('title').notNull(),
   content: text('content').notNull(),
   published: integer('published', { mode: 'boolean' }).default(false).notNull(),
@@ -33,12 +41,16 @@ export const posts = sqliteTable('posts', {
   categoryId: text('category_id')
     .notNull()
     .references(() => categories.id, { onDelete: 'cascade' }),
-  createdAt: integer('created_at').$defaultFn(() => Math.floor(Date.now() / 1000)).notNull(),
+  createdAt: integer('created_at')
+    .$defaultFn(() => Math.floor(Date.now() / 1000))
+    .notNull(),
 });
 
 // Comments table - SQLite version
 export const comments = sqliteTable('comments', {
-  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
   content: text('content').notNull(),
   postId: text('post_id')
     .notNull()
@@ -46,7 +58,9 @@ export const comments = sqliteTable('comments', {
   authorId: text('author_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
-  createdAt: integer('created_at').$defaultFn(() => Math.floor(Date.now() / 1000)).notNull(),
+  createdAt: integer('created_at')
+    .$defaultFn(() => Math.floor(Date.now() / 1000))
+    .notNull(),
 });
 
 // Relations - same as PostgreSQL version

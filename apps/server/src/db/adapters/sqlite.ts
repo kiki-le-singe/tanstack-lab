@@ -35,18 +35,20 @@ export class SqliteAdapter extends BaseAdapter {
     try {
       // Create SQLite database instance
       this._sqlite = new Database(this.dbPath);
-      
+
       // Enable foreign keys (important for referential integrity)
       this._sqlite.pragma('foreign_keys = ON');
-      
+
       // Create Drizzle instance
       this._db = drizzle(this._sqlite, { schema });
       this._initialized = true;
-      
+
       // Test connection
       await this.health();
     } catch (error) {
-      throw new Error(`Failed to initialize SQLite adapter: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to initialize SQLite adapter: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     }
   }
 
@@ -57,7 +59,7 @@ export class SqliteAdapter extends BaseAdapter {
     try {
       this.ensureInitialized();
       // Simple query to test connection
-      this._sqlite!.prepare('SELECT 1 as health').get();
+      this._sqlite?.prepare('SELECT 1 as health').get();
       return true;
     } catch (error) {
       console.error('SQLite health check failed:', error);

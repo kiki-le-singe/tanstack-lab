@@ -3,12 +3,11 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { serve } from '@hono/node-server';
-import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { graphqlServer } from '@/api/graphql/index.js';
 import { restApi } from '@/api/rest/index.js';
-import { db, initializeDatabase, getDatabase } from '@/db/index.js';
+import { initializeDatabase, getDatabase } from '@/db/index.js';
 import { config, isDevelopment } from '@/lib/config.js';
 import {
   auth,
@@ -65,7 +64,7 @@ app.get('/health', async (c) => {
     // Test database connection using adapter
     const dbAdapter = await getDatabase();
     const isHealthy = await dbAdapter.health();
-    
+
     if (!isHealthy) {
       throw new Error('Database health check failed');
     }
@@ -153,7 +152,7 @@ async function startServer() {
     // Initialize database first
     console.log(`🔄 Initializing database...`);
     await initializeDatabase();
-    
+
     console.log(`🚀 Server starting on port ${port}...`);
     console.log(`📊 REST API: http://localhost:${port}/api`);
     console.log(`🔍 GraphQL: http://localhost:${port}/graphql`);
@@ -166,7 +165,7 @@ async function startServer() {
     });
 
     console.log(`✅ Server running on http://localhost:${port}`);
-    
+
     return server;
   } catch (error) {
     console.error('❌ Failed to start server:', error);

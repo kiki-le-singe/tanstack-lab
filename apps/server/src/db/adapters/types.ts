@@ -16,17 +16,17 @@ export interface DatabaseAdapter {
   readonly schema: any; // Database schema
   readonly dialect: DatabaseDialect;
   readonly type: DatabaseType;
-  
+
   /**
    * Initialize the database connection
    */
   initialize(): Promise<void>;
-  
+
   /**
    * Check database health/connectivity
    */
   health(): Promise<boolean>;
-  
+
   /**
    * Close database connection
    */

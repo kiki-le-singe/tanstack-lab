@@ -38,38 +38,35 @@ const DateTimeScalar = new GraphQLScalarType({
   name: 'DateTime',
   description: 'DateTime custom scalar type',
   serialize(value: unknown): string {
-    console.log('DateTime serialize - value:', value, 'type:', typeof value, 'instanceof Date:', value instanceof Date);
-    
     // Handle Date instances
     if (value instanceof Date) {
-      console.log('Date object - getTime():', value.getTime(), 'isNaN:', isNaN(value.getTime()));
       // Check if Date is valid
-      if (isNaN(value.getTime())) {
+      if (Number.isNaN(value.getTime())) {
         throw new Error(`Invalid Date object: ${value}`);
       }
       return value.toISOString();
     }
-    
+
     // Handle SQLite integer timestamps (convert seconds to milliseconds)
     if (typeof value === 'number') {
       // SQLite stores timestamps in seconds, JavaScript Date expects milliseconds
       const timestamp = value < 10000000000 ? value * 1000 : value;
       const date = new Date(timestamp);
-      if (isNaN(date.getTime())) {
+      if (Number.isNaN(date.getTime())) {
         throw new Error(`Invalid timestamp: ${value}`);
       }
       return date.toISOString();
     }
-    
+
     // Handle string timestamps
     if (typeof value === 'string') {
       const date = new Date(value);
-      if (isNaN(date.getTime())) {
+      if (Number.isNaN(date.getTime())) {
         throw new Error(`Invalid date string: ${value}`);
       }
       return date.toISOString();
     }
-    
+
     throw new Error(`Value is not a valid DateTime: ${value} (type: ${typeof value})`);
   },
   parseValue(value: unknown): Date {
