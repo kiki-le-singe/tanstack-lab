@@ -1,36 +1,36 @@
+import { and, desc, eq, type SQL } from 'drizzle-orm';
 import { GraphQLScalarType } from 'graphql';
 import { Kind } from 'graphql/language/index.js';
-import { db, users, categories, posts, comments } from '@/db/index.js';
-import { eq, and, desc } from 'drizzle-orm';
+import { categories, comments, db, posts, users } from '@/db/index.js';
 import {
-  createUserSchema,
-  updateUserSchema,
   createCategorySchema,
-  updateCategorySchema,
-  createPostSchema,
-  updatePostSchema,
   createCommentSchema,
+  createPostSchema,
+  createUserSchema,
+  updateCategorySchema,
   updateCommentSchema,
+  updatePostSchema,
+  updateUserSchema,
 } from '@/schemas/validation.js';
 import type {
-  PaginationArgs,
+  Category,
+  Comment,
+  CreateCategoryArgs,
+  CreateCommentArgs,
+  CreatePostArgs,
+  CreateUserArgs,
+  DeleteArgs,
   IdArgs,
-  SlugArgs,
+  PaginationArgs,
+  Post,
   PostsArgs,
   PostsByCategoryArgs,
-  CreateUserArgs,
-  UpdateUserArgs,
-  CreateCategoryArgs,
+  SlugArgs,
   UpdateCategoryArgs,
-  CreatePostArgs,
-  UpdatePostArgs,
-  CreateCommentArgs,
   UpdateCommentArgs,
-  DeleteArgs,
+  UpdatePostArgs,
+  UpdateUserArgs,
   User,
-  Category,
-  Post,
-  Comment,
 } from './types.js';
 
 // Custom DateTime scalar
@@ -148,7 +148,7 @@ export const resolvers = {
       const offset = (page - 1) * limit;
 
       // Build where condition for relational API
-      let whereCondition: any;
+      let whereCondition: SQL | undefined;
       if (filters) {
         const conditions = [];
         if (filters.published !== undefined) {

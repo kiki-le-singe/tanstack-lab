@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+
 dotenv.config();
 
 import { getDatabase } from './index.js';
@@ -9,7 +10,7 @@ async function seed() {
   try {
     // Get database adapter
     const adapter = await getDatabase();
-    const db = adapter.db as any; // Type assertion for seed compatibility
+    const db = adapter.db; // Database instance from adapter
     const { users, categories, posts, comments } = adapter.schema;
 
     console.log(`🔧 Using ${adapter.type} database (${adapter.dialect})`);

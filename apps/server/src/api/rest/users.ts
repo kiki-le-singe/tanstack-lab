@@ -38,7 +38,7 @@ userRoutes.get('/', zValidator('query', paginationSchema), async (c) => {
     });
 
     // Transform to include post count
-    const usersWithCounts = userList.map((user: any) => ({
+    const usersWithCounts = userList.map((user) => ({
       ...user,
       postCount: user.posts.length,
       posts: undefined, // Remove the posts array, just keep the count

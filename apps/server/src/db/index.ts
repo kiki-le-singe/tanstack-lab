@@ -1,8 +1,9 @@
 import dotenv from 'dotenv';
+
 dotenv.config();
 
-import { createDatabaseAdapterFromEnvironment } from './adapters/index.js';
 import type { DatabaseAdapter } from './adapters/index.js';
+import { createDatabaseAdapterFromEnvironment } from './adapters/index.js';
 
 /**
  * Global database adapter instance
@@ -61,14 +62,14 @@ export async function getSchema() {
  */
 
 // Create a singleton instance that's initialized lazily
-let _dbInstance: any = null;
-let _schemaInstance: any = null;
+let _dbInstance: DatabaseAdapter['db'] | null = null;
+let _schemaInstance: DatabaseAdapter['schema'] | null = null;
 
 /**
  * Legacy db export - lazily initialized
  * Existing code can continue using `db` but it now auto-selects the database
  */
-export const db = new Proxy({} as any, {
+export const db = new Proxy({} as DatabaseAdapter['db'], {
   get(_target, prop) {
     if (!_dbInstance) {
       // Try to auto-initialize if not done yet
