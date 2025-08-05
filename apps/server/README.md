@@ -7,17 +7,19 @@ The backend API server for the TanStack Lab project, built with modern tools and
 - **[Hono](https://hono.dev/)** - Fast, lightweight web framework for REST API
 - **[GraphQL Yoga](https://the-guild.dev/graphql/yoga-server)** - Modern GraphQL server
 - **[Drizzle ORM](https://orm.drizzle.team/)** - TypeScript-first ORM with excellent DX
-- **[Neon Database](https://neon.tech/)** - Serverless PostgreSQL
-- **[Zod](https://zod.dev/)** - TypeScript-first schema validation
+- **[Neon Database](https://neon.tech/)** - Serverless PostgreSQL (production)
+- **[SQLite](https://sqlite.org/)** - Embedded database (development)
+- **[Zod](https://zod.dev/)** - TypeScript-first schema validation with environment validation
 - **[tsx](https://tsx.is/)** - Fast TypeScript execution for development
 - **[tsup](https://tsup.egoist.dev/)** - Fast TypeScript bundler
+- **[Biome](https://biomejs.dev/)** - Fast linter and formatter
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 - Node.js 20+
 - pnpm 9+
-- Neon Database account and connection string
+- **Optional**: Neon Database account for production database
 
 ### Setup
 
@@ -29,12 +31,27 @@ The backend API server for the TanStack Lab project, built with modern tools and
 2. **Environment setup:**
    ```bash
    # Create .env file
-   touch .env
+   cp .env.example .env
+   ```
    
-   # Add your environment variables
-   echo 'DATABASE_URL="your-neon-connection-string"
+   **Choose your database:**
+   
+   **Option A: SQLite (Recommended for development)**
+   ```bash
+   # .env
+   DATABASE_TYPE=sqlite
+   DATABASE_URL="file:./dev.db"
    PORT=3001
-   NODE_ENV=development' > .env
+   NODE_ENV=development
+   ```
+   
+   **Option B: Neon PostgreSQL (Production)**
+   ```bash
+   # .env
+   DATABASE_TYPE=neon
+   DATABASE_URL="postgresql://user:pass@host.neon.tech/db?sslmode=require"
+   PORT=3001
+   NODE_ENV=development
    ```
 
 3. **Database setup:**
@@ -169,7 +186,7 @@ mutation {
 
 ## 🗄️ Database Schema
 
-Built with Drizzle ORM using PostgreSQL:
+Built with Drizzle ORM supporting both SQLite and PostgreSQL with identical schemas:
 
 ### Tables
 - **users** - User profiles with avatar support
@@ -193,14 +210,27 @@ The seed script creates realistic blog data:
 ## 🔧 Configuration
 
 ### Environment Variables
-```bash
-# Required
-DATABASE_URL="postgresql://user:pass@host.neon.tech/db?sslmode=require"
+The server uses **enhanced Zod validation** for type-safe environment configuration:
 
-# Optional
-PORT=3001
-NODE_ENV=development
+```bash
+# Database Configuration (Required)
+DATABASE_TYPE=sqlite|neon           # Choose database type
+DATABASE_URL="connection-string"    # Database connection URL
+
+# Server Configuration (Optional - has defaults)
+PORT=3001                          # Server port (1000-65535)
+NODE_ENV=development               # Environment (development|production|test)
 ```
+
+**Database URL formats:**
+- **SQLite**: `file:./dev.db` or path to `.db` file
+- **Neon**: `postgresql://user:pass@host.neon.tech/db?sslmode=require`
+
+**Validation Features:**
+- ✅ Cross-field validation (DATABASE_URL format must match DATABASE_TYPE)
+- ✅ Port range validation (1000-65535)
+- ✅ Environment enum validation
+- ✅ Clear error messages with helpful hints
 
 ### TypeScript Configuration
 - Modern ES2022 target
@@ -208,11 +238,21 @@ NODE_ENV=development
 - Strict type checking enabled
 - Path mapping for clean imports (`@/db/*`, etc.)
 
-### Drizzle Configuration
-- PostgreSQL dialect
-- Schema-first approach
-- Migrations stored in `./drizzle`
-- Type-safe database operations
+### Database Adapter Architecture
+- **Multi-database support** with adapter pattern
+- **Environment-based selection** via `DATABASE_TYPE` configuration
+- **Schema-first approach** with dialect-specific implementations
+- **Type-safe operations** across both database types
+- **Automatic database detection** and connection management
+
+**Supported Databases:**
+- **SQLite**: `better-sqlite3` with file-based storage
+- **PostgreSQL**: `@neondatabase/serverless` for Neon integration
+
+**Configuration:**
+- Migrations stored in `./drizzle/{sqlite|neon}`
+- Separate schemas: `src/db/schemas/{sqlite|postgresql}.ts`
+- Factory pattern: `DatabaseFactory.createFromEnvironment()`
 
 ## 🏗️ Project Structure
 
@@ -229,13 +269,28 @@ apps/server/
 │   │   └── graphql/       # GraphQL schema and resolvers
 │   │       ├── schema.ts
 │   │       ├── resolvers.ts
+│   │       ├── types.ts
 │   │       └── index.ts
 │   ├── db/                # Database layer
-│   │   ├── schema.ts      # Drizzle schema definitions
-│   │   ├── index.ts       # Database connection
+│   │   ├── adapters/      # Database adapter pattern
+│   │   │   ├── base.ts    # Abstract base adapter
+│   │   │   ├── factory.ts # Adapter factory
+│   │   │   ├── neon.ts    # Neon PostgreSQL adapter
+│   │   │   ├── sqlite.ts  # SQLite adapter
+│   │   │   └── types.ts   # Adapter interfaces
+│   │   ├── schemas/       # Database schemas
+│   │   │   ├── postgresql.ts # PostgreSQL schema
+│   │   │   └── sqlite.ts     # SQLite schema
+│   │   ├── index.ts       # Database connection management
 │   │   └── seed.ts        # Seed script
+│   ├── lib/               # Core utilities
+│   │   ├── config.ts      # Environment validation
+│   │   ├── middleware.ts  # Security middleware
+│   │   └── response.ts    # API response utilities
 │   ├── schemas/           # Validation schemas
 │   │   └── validation.ts  # Zod schemas
+│   ├── utils/             # Helper functions
+│   │   └── index.ts
 │   └── index.ts           # Server entry point
 ├── drizzle/               # Generated migrations
 ├── dist/                  # Build output
@@ -248,9 +303,11 @@ apps/server/
 ## 🔍 Development Tips
 
 ### Database Management
+- **SQLite**: Zero-config, file-based database
+- **Neon**: Serverless PostgreSQL with advanced features
 - Use `pnpm db:studio` to visually explore your database
 - Run `pnpm db:generate` after schema changes
-- Always test migrations on a development branch first
+- **Database switching**: Just change `DATABASE_TYPE` in `.env` and restart
 
 ### API Testing
 - REST endpoints return consistent JSON with pagination
@@ -271,6 +328,7 @@ pnpm build
 
 ### Environment
 Ensure these environment variables are set:
+- `DATABASE_TYPE=neon` - Use Neon PostgreSQL
 - `DATABASE_URL` - Your production Neon connection string
 - `NODE_ENV=production`
 - `PORT` - Server port (default: 3001)
@@ -283,10 +341,13 @@ Ensure these environment variables are set:
 ## 🤝 Contributing
 
 This server follows modern Node.js and TypeScript best practices:
-- ESM modules throughout
-- Comprehensive error handling
-- Type-safe database operations
-- Consistent API responses
-- Proper separation of concerns
+- **ESM modules** throughout
+- **Database adapter pattern** for multi-database support
+- **Comprehensive error handling** with graceful shutdowns
+- **Type-safe database operations** across SQLite and PostgreSQL
+- **Environment validation** with Zod schemas
+- **Security-first middleware** (rate limiting, sanitization, headers)
+- **Consistent API responses** for both REST and GraphQL
+- **Clean architecture** with proper separation of concerns
 
 For questions or improvements, please refer to the main project README.

@@ -28,11 +28,11 @@ userRoutes.get('/', zValidator('query', paginationSchema), async (c) => {
     const userList = await db.query.users.findMany({
       limit,
       offset,
-      orderBy: [users.createdAt],
+      orderBy: [desc(users.createdAt)],
       with: {
         posts: {
           columns: { id: true }, // Only get IDs for counting
-          where: eq(posts.published, true), // Only published posts
+          where: eq(posts.published, 1), // Only published posts (SQLite uses 1 for true)
         },
       },
     });

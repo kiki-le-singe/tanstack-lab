@@ -9,10 +9,13 @@ This project is built as a **Turborepo monorepo** featuring:
 ### Backend (`apps/server`)
 - **REST API**: Built with [Hono](https://hono.dev/) - Fast & lightweight web framework
 - **GraphQL API**: Built with [GraphQL Yoga](https://the-guild.dev/graphql/yoga-server) - Modern GraphQL server
-- **Database**: [Drizzle ORM](https://orm.drizzle.team/) + PostgreSQL (Neon)
-- **Validation**: [Zod](https://zod.dev/) for runtime type safety
+- **Database**: [Drizzle ORM](https://orm.drizzle.team/) with dual support:
+  - **SQLite**: Zero-config, file-based database
+  - **PostgreSQL**: Via [Neon](https://neon.tech/) serverless platform
+- **Validation**: [Zod](https://zod.dev/) for runtime type safety + environment validation
 - **Development**: [tsx](https://tsx.is/) for hot reloading
 - **Build**: [tsup](https://tsup.egoist.dev/) for fast builds
+- **Code Quality**: [Biome](https://biomejs.dev/) for linting & formatting
 
 ### Frontend (Coming Soon)
 - **Router**: @tanstack/router
@@ -25,7 +28,7 @@ This project is built as a **Turborepo monorepo** featuring:
 ### Prerequisites
 - Node.js 20+
 - pnpm 9+
-- PostgreSQL database (we recommend [Neon](https://neon.tech/))
+- **Optional**: PostgreSQL database via [Neon](https://neon.tech/) (SQLite works out-of-the-box)
 
 ### Installation
 
@@ -39,21 +42,38 @@ This project is built as a **Turborepo monorepo** featuring:
 2. **Set up environment variables:**
    ```bash
    cd apps/server
-   # Create .env file and add your Neon database URL
-   echo 'DATABASE_URL="your-neon-connection-string"
+   cp .env.example .env
+   ```
+   
+   **Choose your database:**
+   
+   **Option A: SQLite (Zero Config)**
+   ```bash
+   # .env
+   DATABASE_TYPE=sqlite
+   DATABASE_URL="file:./dev.db"
    PORT=3001
-   NODE_ENV=development' > .env
+   NODE_ENV=development
+   ```
+   
+   **Option B: Neon PostgreSQL**
+   ```bash
+   # First: Create free account at https://neon.tech
+   # Copy your connection string from Neon dashboard
+   
+   # .env
+   DATABASE_TYPE=neon
+   DATABASE_URL="your-neon-connection-string"
+   PORT=3001
+   NODE_ENV=development
    ```
 
 3. **Set up the database:**
    ```bash
-   # Generate database schema
-   pnpm db:generate
-   
-   # Push schema to database
+   # Push schema to database (creates tables)
    pnpm db:push
    
-   # Seed with sample data
+   # Seed with sample data (3 users, 7 posts, 9 comments)
    pnpm db:seed
    ```
 
@@ -67,9 +87,21 @@ This project is built as a **Turborepo monorepo** featuring:
    ```
 
 The server will start on `http://localhost:3001` with the following endpoints:
-- REST API: `http://localhost:3001/api`
-- GraphQL: `http://localhost:3001/graphql`
-- Health check: `http://localhost:3001/health`
+- **Health check**: http://localhost:3001/health
+- **REST API**: http://localhost:3001/api/users, /api/posts
+- **GraphQL**: http://localhost:3001/graphql (interactive playground)
+
+### 5. **Verify it's working:**
+```bash
+# Test health endpoint
+curl http://localhost:3001/health
+
+# Test REST API  
+curl http://localhost:3001/api/users
+
+# Test GraphQL (in browser)
+open http://localhost:3001/graphql
+```
 
 ## 🗄️ Database Schema
 
@@ -129,7 +161,10 @@ tanstack-lab/
 │       │   ├── api/
 │       │   │   ├── rest/     # Hono REST routes
 │       │   │   └── graphql/  # GraphQL schema & resolvers
-│       │   ├── db/           # Database schema & connection
+│       │   ├── db/           # Database layer
+│       │   │   ├── adapters/ # Multi-database support
+│       │   │   └── schemas/  # SQLite & PostgreSQL schemas
+│       │   ├── lib/          # Config & middleware
 │       │   ├── schemas/      # Zod validation schemas
 │       │   └── index.ts      # Server entry point
 │       ├── drizzle.config.ts
@@ -161,10 +196,12 @@ tanstack-lab/
 This project aims to explore and compare:
 
 1. **API Paradigms**: REST vs GraphQL performance, DX, and use cases
-2. **Modern TypeScript**: End-to-end type safety from database to frontend
-3. **Build Tools**: Modern ESM-first toolchain
-4. **Data Fetching**: TanStack Query patterns for both API types
-5. **Monorepo Management**: Turborepo workflows and optimization
+2. **Database Abstractions**: Multi-database support with adapter patterns
+3. **Modern TypeScript**: End-to-end type safety from database to frontend
+4. **Environment Management**: Type-safe configuration with Zod validation
+5. **Build Tools**: Modern ESM-first toolchain
+6. **Data Fetching**: TanStack Query patterns for both API types
+7. **Monorepo Management**: Turborepo workflows and optimization
 
 ## 📚 Tech Stack
 
@@ -174,10 +211,12 @@ This project aims to explore and compare:
 - **Monorepo**: Turborepo 2.0+
 - **Backend Framework**: Hono 4.5+
 - **GraphQL**: GraphQL Yoga 5.6+
-- **Database**: PostgreSQL + Drizzle ORM 0.33+
-- **Validation**: Zod 3.23+
+- **Database**: SQLite + PostgreSQL via Drizzle ORM 0.33+
+- **Database Clients**: better-sqlite3 + @neondatabase/serverless
+- **Validation**: Zod 3.23+ (runtime + environment validation)
 - **Development**: tsx 4.16+
 - **Build**: tsup 8.2+
+- **Code Quality**: Biome (linting + formatting)
 
 ---
 

@@ -8,7 +8,7 @@ Before starting, ensure you have:
 - **Node.js 20+** - [Download here](https://nodejs.org/)
 - **pnpm 9+** - Install with `npm install -g pnpm`
 - **Git** - For version control
-- **Database access** - Get Neon connection string from team lead
+- **Optional**: Neon connection string for production database (SQLite works out-of-the-box)
 
 ## 🏁 Quick Start (5 steps)
 
@@ -22,23 +22,38 @@ pnpm install
 ### 2. **Environment Setup**
 ```bash
 cd apps/server
-touch .env
+cp .env.example .env
+```
 
-# Add your database connection (replace with real values)
-echo 'DATABASE_URL="postgresql://user:password@host.neon.tech/db?sslmode=require"
+**Choose your database:**
+
+**Option A: SQLite (Zero Config)**
+```bash
+# .env
+DATABASE_TYPE=sqlite
+DATABASE_URL="file:./dev.db"
 PORT=3001
-NODE_ENV=development' > .env
+NODE_ENV=development
+```
+
+**Option B: Neon PostgreSQL**
+```bash
+# First: Create free account at https://neon.tech
+# Copy connection string from your Neon project dashboard
+
+# .env  
+DATABASE_TYPE=neon
+DATABASE_URL="your-neon-connection-string"
+PORT=3001
+NODE_ENV=development
 ```
 
 ### 3. **Database Setup**
 ```bash
-# Generate any new migrations
-pnpm db:generate
-
-# Apply schema to database
+# Create database tables
 pnpm db:push
 
-# Load sample data
+# Load sample data (3 users, 7 posts, 9 comments)
 pnpm db:seed
 ```
 
@@ -83,7 +98,10 @@ tanstack-lab/
 │   ├── src/
 │   │   ├── api/rest/         # REST endpoints (Hono)
 │   │   ├── api/graphql/      # GraphQL schema (Yoga)
-│   │   ├── db/               # Database models & seed
+│   │   ├── db/               # Database layer
+│   │   │   ├── adapters/     # Multi-database support
+│   │   │   └── schemas/      # SQLite & PostgreSQL schemas
+│   │   ├── lib/              # Config & middleware
 │   │   ├── schemas/          # Zod validation
 │   │   └── index.ts          # Server entry point
 │   ├── drizzle/              # Database migrations
@@ -120,11 +138,12 @@ git status                  # Check git status
 
 **TanStack Lab** is a learning project comparing REST vs GraphQL APIs:
 
-- **Same Data**: Both APIs use the same PostgreSQL database
+- **Dual Database**: Supports both SQLite and PostgreSQL with identical schemas
 - **Same Features**: Full CRUD operations for users, posts, categories, comments
 - **Different Approaches**: 
   - REST: Multiple endpoints with Hono
   - GraphQL: Single endpoint with Yoga
+- **Modern Stack**: Hono, Drizzle ORM, GraphQL Yoga, TypeScript, Zod validation
 
 ### Sample Data
 After seeding, you'll have:
@@ -163,11 +182,14 @@ curl -X POST "http://localhost:3001/graphql" \
 
 ## 🚨 Common Issues
 
-### Database Connection Error
+### Environment Validation Error
 ```
-Error: DATABASE_URL environment variable is required
+❌ Environment validation failed:
+  - DATABASE_URL: DATABASE_URL format must match the selected DATABASE_TYPE
 ```
-**Solution**: Make sure your `.env` file has the correct `DATABASE_URL`
+**Solution**: Make sure your DATABASE_URL format matches your DATABASE_TYPE:
+- SQLite: `DATABASE_URL="file:./dev.db"`
+- Neon: `DATABASE_URL="postgresql://..."`
 
 ### Port Already in Use
 ```

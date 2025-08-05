@@ -49,10 +49,43 @@ curl -X POST http://localhost:3001/graphql \
 
 ## Database
 
-- **Provider**: Neon (Serverless PostgreSQL)
-- **ORM**: Drizzle
-- **Schema**: Users, Categories, Posts, Comments
+### Dual Database Support
+- **SQLite**: File-based, zero-config database
+- **Neon**: Serverless PostgreSQL platform
+- **ORM**: Drizzle with database adapter pattern
+- **Schema**: Users, Categories, Posts, Comments (identical across both)
 - **Sample Data**: 3 users, 3 categories, 7 posts, 9 comments
+
+### Database Commands
+```bash
+# Database operations (works with both SQLite and Neon)
+pnpm db:generate  # Generate migrations
+pnpm db:push      # Push schema to database
+pnpm db:seed      # Seed sample data
+pnpm db:studio    # Open Drizzle Studio GUI
+```
+
+### Switching Databases
+**For SQLite**:
+```bash
+# .env
+DATABASE_TYPE=sqlite
+DATABASE_URL="file:./dev.db"
+```
+
+**For Neon**:
+```bash
+# .env
+DATABASE_TYPE=neon
+DATABASE_URL="postgresql://user:pass@host.neon.tech/db?sslmode=require"
+```
+
+### Database Features
+- ✅ **Environment validation** with Zod schemas
+- ✅ **Cross-field validation** (URL format matches database type)
+- ✅ **Adapter pattern** for seamless database switching
+- ✅ **Type safety** across both database types
+- ✅ **Automatic detection** based on environment variables
 
 ## Next Steps
 

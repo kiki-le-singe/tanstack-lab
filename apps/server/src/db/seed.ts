@@ -1,12 +1,19 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import { db, users, categories, posts, comments } from './index.js';
+import { getDatabase } from './index.js';
 
 async function seed() {
   console.log('🌱 Starting database seed...');
 
   try {
+    // Get database adapter
+    const adapter = await getDatabase();
+    const db = adapter.db;
+    const { users, categories, posts, comments } = adapter.schema;
+    
+    console.log(`🔧 Using ${adapter.type} database (${adapter.dialect})`);
+
     // Clear existing data (in reverse order due to foreign keys)
     console.log('🧹 Clearing existing data...');
     await db.delete(comments);

@@ -8,7 +8,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { graphqlServer } from '@/api/graphql/index.js';
 import { restApi } from '@/api/rest/index.js';
-import { db } from '@/db/index.js';
+import { db, initializeDatabase, getDatabase } from '@/db/index.js';
 import { config, isDevelopment } from '@/lib/config.js';
 import {
   auth,
@@ -62,8 +62,14 @@ app.get('/health', async (c) => {
   const startTime = Date.now();
 
   try {
-    // Test database connection
-    await db.execute(sql`SELECT 1`);
+    // Test database connection using adapter
+    const dbAdapter = await getDatabase();
+    const isHealthy = await dbAdapter.health();
+    
+    if (!isHealthy) {
+      throw new Error('Database health check failed');
+    }
+
     const responseTime = Date.now() - startTime;
 
     return apiSuccess(c, {
@@ -71,6 +77,10 @@ app.get('/health', async (c) => {
       services: {
         database: 'connected',
         api: 'operational',
+      },
+      database: {
+        type: dbAdapter.type,
+        dialect: dbAdapter.dialect,
       },
       uptime: process.uptime(),
       responseTime: `${responseTime}ms`,
@@ -135,21 +145,36 @@ app.onError((err, c) => {
   );
 });
 
-// Start server
-const port = config.PORT;
+// Initialize database and start server
+async function startServer() {
+  const port = config.PORT;
 
-console.log(`🚀 Server starting on port ${port}...`);
-console.log(`📊 REST API: http://localhost:${port}/api`);
-console.log(`🔍 GraphQL: http://localhost:${port}/graphql`);
-console.log(`💚 Health check: http://localhost:${port}/health`);
-console.log(`🛡️  Security: Rate limiting, sanitization, security headers enabled`);
+  try {
+    // Initialize database first
+    console.log(`🔄 Initializing database...`);
+    await initializeDatabase();
+    
+    console.log(`🚀 Server starting on port ${port}...`);
+    console.log(`📊 REST API: http://localhost:${port}/api`);
+    console.log(`🔍 GraphQL: http://localhost:${port}/graphql`);
+    console.log(`💚 Health check: http://localhost:${port}/health`);
+    console.log(`🛡️  Security: Rate limiting, sanitization, security headers enabled`);
 
-const server = serve({
-  fetch: app.fetch,
-  port,
-});
+    const server = serve({
+      fetch: app.fetch,
+      port,
+    });
 
-console.log(`✅ Server running on http://localhost:${port}`);
+    console.log(`✅ Server running on http://localhost:${port}`);
+    
+    return server;
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+const server = await startServer();
 
 // Graceful shutdown handling
 const gracefulShutdown = (signal: string) => {

@@ -1,7 +1,7 @@
 import { GraphQLScalarType } from 'graphql';
 import { Kind } from 'graphql/language/index.js';
 import { db, users, categories, posts, comments } from '@/db/index.js';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import {
   createUserSchema,
   updateUserSchema,
@@ -38,10 +38,39 @@ const DateTimeScalar = new GraphQLScalarType({
   name: 'DateTime',
   description: 'DateTime custom scalar type',
   serialize(value: unknown): string {
+    console.log('DateTime serialize - value:', value, 'type:', typeof value, 'instanceof Date:', value instanceof Date);
+    
+    // Handle Date instances
     if (value instanceof Date) {
+      console.log('Date object - getTime():', value.getTime(), 'isNaN:', isNaN(value.getTime()));
+      // Check if Date is valid
+      if (isNaN(value.getTime())) {
+        throw new Error(`Invalid Date object: ${value}`);
+      }
       return value.toISOString();
     }
-    throw new Error(`Value is not an instance of Date: ${value}`);
+    
+    // Handle SQLite integer timestamps (convert seconds to milliseconds)
+    if (typeof value === 'number') {
+      // SQLite stores timestamps in seconds, JavaScript Date expects milliseconds
+      const timestamp = value < 10000000000 ? value * 1000 : value;
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) {
+        throw new Error(`Invalid timestamp: ${value}`);
+      }
+      return date.toISOString();
+    }
+    
+    // Handle string timestamps
+    if (typeof value === 'string') {
+      const date = new Date(value);
+      if (isNaN(date.getTime())) {
+        throw new Error(`Invalid date string: ${value}`);
+      }
+      return date.toISOString();
+    }
+    
+    throw new Error(`Value is not a valid DateTime: ${value} (type: ${typeof value})`);
   },
   parseValue(value: unknown): Date {
     if (typeof value === 'string') {
@@ -65,11 +94,16 @@ export const resolvers = {
     users: async (_: unknown, { page = 1, limit = 10 }: PaginationArgs) => {
       const offset = (page - 1) * limit;
       const userList = await db
-        .select()
+        .select({
+          id: users.id,
+          name: users.name,
+          avatarUrl: users.avatarUrl,
+          createdAt: sql<number>`created_at`, // Use raw SQL to get integer directly
+        })
         .from(users)
         .limit(limit)
         .offset(offset)
-        .orderBy(users.createdAt);
+        .orderBy(sql`created_at`);
 
       return {
         users: userList,
@@ -126,7 +160,8 @@ export const resolvers = {
       // Build query conditions
       const conditions = [];
       if (filters?.published !== undefined) {
-        conditions.push(eq(posts.published, filters.published));
+        // Convert boolean to integer for SQLite compatibility
+        conditions.push(eq(posts.published, filters.published ? 1 : 0));
       }
       if (filters?.authorId) {
         conditions.push(eq(posts.authorId, filters.authorId));
