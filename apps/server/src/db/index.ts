@@ -91,6 +91,23 @@ export async function initializeDatabase(): Promise<void> {
 }
 
 /**
- * Legacy schema exports for type compatibility
+ * Conditional schema loading based on DATABASE_TYPE environment
  */
-export * from './schemas/postgresql.js';
+const isDevelopment = process.env.NODE_ENV === 'development';
+const databaseType = process.env.DATABASE_TYPE;
+
+// Dynamic schema import with modern ESM patterns
+const schemaModule =
+  databaseType === 'sqlite'
+    ? await import('./schemas/sqlite.js')
+    : await import('./schemas/postgresql.js');
+
+// Re-export all schema entities for modern query compatibility
+export const { users, categories, posts, comments } = schemaModule;
+
+// Log schema selection in development
+if (isDevelopment) {
+  console.log(
+    `📋 Schema loaded: ${databaseType === 'sqlite' ? 'SQLite' : 'PostgreSQL'} (${databaseType})`,
+  );
+}
