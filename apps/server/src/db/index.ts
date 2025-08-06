@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+import { logger } from '../lib/logger.js';
 import type { DatabaseAdapter } from './adapters/index.js';
 import { createDatabaseAdapterFromEnvironment } from './adapters/index.js';
 
@@ -20,19 +21,18 @@ export async function getDatabase(): Promise<DatabaseAdapter> {
     dbAdapter = createDatabaseAdapterFromEnvironment();
     await dbAdapter.initialize();
 
-    // Enhanced logging to make database selection very clear
-    console.log('');
-    console.log('='.repeat(60));
-    console.log(`📊 DATABASE: ${dbAdapter.type.toUpperCase()} (${dbAdapter.dialect})`);
-    if (dbAdapter.type === 'sqlite') {
-      console.log('🏠 Running with LOCAL SQLite database');
-      console.log('📁 Database file: ./dev.db');
-    } else {
-      console.log('☁️  Running with NEON PostgreSQL database');
-      console.log('🌐 Connected to cloud database');
-    }
-    console.log('='.repeat(60));
-    console.log('');
+    // Log database selection with structured data
+    logger.info(
+      {
+        database: {
+          type: dbAdapter.type.toUpperCase(),
+          dialect: dbAdapter.dialect,
+          location: dbAdapter.type === 'sqlite' ? 'local' : 'cloud',
+          file: dbAdapter.type === 'sqlite' ? './dev.db' : undefined,
+        },
+      },
+      `Connected to ${dbAdapter.type.toUpperCase()} database`,
+    );
   }
 
   return dbAdapter;
@@ -73,7 +73,7 @@ export const db = new Proxy({} as DatabaseAdapter['db'], {
   get(_target, prop) {
     if (!_dbInstance) {
       // Try to auto-initialize if not done yet
-      console.warn('Database accessed before initialization. Auto-initializing...');
+      logger.warn('Database accessed before initialization. Auto-initializing...');
       throw new Error('Database not initialized. Call initializeDatabase() at app startup.');
     }
     return _dbInstance[prop];
@@ -96,18 +96,23 @@ export async function initializeDatabase(): Promise<void> {
 const isDevelopment = process.env.NODE_ENV === 'development';
 const databaseType = process.env.DATABASE_TYPE;
 
-// Dynamic schema import with modern ESM patterns
 const schemaModule =
   databaseType === 'sqlite'
     ? await import('./schemas/sqlite.js')
     : await import('./schemas/postgresql.js');
 
-// Re-export all schema entities for modern query compatibility
 export const { users, categories, posts, comments } = schemaModule;
 
 // Log schema selection in development
 if (isDevelopment) {
-  console.log(
-    `📋 Schema loaded: ${databaseType === 'sqlite' ? 'SQLite' : 'PostgreSQL'} (${databaseType})`,
+  logger.debug(
+    {
+      schema: {
+        type: databaseType === 'sqlite' ? 'SQLite' : 'PostgreSQL',
+        databaseType,
+        entities: ['users', 'categories', 'posts', 'comments'],
+      },
+    },
+    'Database schema loaded',
   );
 }

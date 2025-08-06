@@ -2,6 +2,7 @@ import { zValidator } from '@hono/zod-validator';
 import { desc, eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { comments, db, posts, users } from '@/db/index.js';
+import { withRequestId } from '@/lib/logger.js';
 import {
   apiCreated,
   apiError,
@@ -24,7 +25,6 @@ userRoutes.get('/', zValidator('query', paginationSchema), async (c) => {
   const offset = (page - 1) * limit;
 
   try {
-    // Modern relational query with post counts
     const userList = await db.query.users.findMany({
       limit,
       offset,
@@ -50,7 +50,9 @@ userRoutes.get('/', zValidator('query', paginationSchema), async (c) => {
       hasMore: userList.length === limit,
     });
   } catch (error) {
-    console.error('Error fetching users:', error);
+    const requestId = c.get('requestId') || 'unknown';
+    const logger = withRequestId(requestId);
+    logger.error({ err: error, operation: 'fetch-users' }, 'Failed to fetch users');
     return apiError(c, 'Could not retrieve users from database', 500);
   }
 });
@@ -89,7 +91,9 @@ userRoutes.get('/:id', zValidator('param', uuidParamSchema), async (c) => {
 
     return apiSuccess(c, { user });
   } catch (error) {
-    console.error('Error fetching user:', error);
+    const requestId = c.get('requestId') || 'unknown';
+    const logger = withRequestId(requestId);
+    logger.error({ err: error, operation: 'fetch-user', userId: id }, 'Failed to fetch user');
     return apiError(c, 'Could not retrieve user from database', 500);
   }
 });
@@ -103,7 +107,9 @@ userRoutes.post('/', zValidator('json', createUserSchema), async (c) => {
 
     return apiCreated(c, { user: newUser });
   } catch (error) {
-    console.error('Error creating user:', error);
+    const requestId = c.get('requestId') || 'unknown';
+    const logger = withRequestId(requestId);
+    logger.error({ err: error, operation: 'create-user', userData: body }, 'Failed to create user');
     return apiError(c, 'Could not create user', 500);
   }
 });
@@ -130,7 +136,12 @@ userRoutes.put(
 
       return apiSuccess(c, { user: updatedUser });
     } catch (error) {
-      console.error('Error updating user:', error);
+      const requestId = c.get('requestId') || 'unknown';
+      const logger = withRequestId(requestId);
+      logger.error(
+        { err: error, operation: 'update-user', userId: id, updateData: body },
+        'Failed to update user',
+      );
       return apiError(c, 'Could not update user', 500);
     }
   },
@@ -149,7 +160,9 @@ userRoutes.delete('/:id', zValidator('param', uuidParamSchema), async (c) => {
 
     return apiSuccess(c, { message: 'User deleted successfully' });
   } catch (error) {
-    console.error('Error deleting user:', error);
+    const requestId = c.get('requestId') || 'unknown';
+    const logger = withRequestId(requestId);
+    logger.error({ err: error, operation: 'delete-user', userId: id }, 'Failed to delete user');
     return apiError(c, 'Could not delete user', 500);
   }
 });

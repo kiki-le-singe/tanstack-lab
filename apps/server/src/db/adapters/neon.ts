@@ -3,6 +3,7 @@ import { neon } from '@neondatabase/serverless';
 import { sql } from 'drizzle-orm';
 import { BaseAdapter } from './base.js';
 import * as schema from '../schemas/postgresql.js';
+import { logger } from '../../lib/logger.js';
 
 type NeonDatabase = ReturnType<typeof drizzle<typeof schema>>;
 
@@ -58,7 +59,7 @@ export class NeonAdapter extends BaseAdapter<NeonDatabase, typeof schema> {
       await this._db?.execute(sql`SELECT 1 as health`);
       return true;
     } catch (error) {
-      console.error('Neon health check failed:', error);
+      logger.error({ err: error, adapter: 'neon' }, 'Neon database health check failed');
       return false;
     }
   }

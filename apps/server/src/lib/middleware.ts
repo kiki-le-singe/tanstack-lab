@@ -4,6 +4,7 @@ import { rateLimiter } from 'hono-rate-limiter';
 import { JSDOM } from 'jsdom';
 import { v4 as uuidv4 } from 'uuid';
 import { isDevelopment } from './config.js';
+import { withRequestId } from './logger.js';
 
 /**
  * Initialize DOMPurify with JSDOM for server-side usage
@@ -201,17 +202,39 @@ export const auth = async (c: Context, next: Next) => {
 };
 
 /**
- * Request logging enhancement
- * Adds structured logging information
+ * Logging middleware
+ * Provides request correlation and performance tracking
  */
 export const enhancedLogger = async (c: Context, next: Next) => {
   const start = Date.now();
   const requestId = c.get('requestId') || 'unknown';
+  const logger = withRequestId(requestId);
 
-  console.log(`[${requestId}] --> ${c.req.method} ${c.req.path}`);
+  // Log incoming request
+  logger.info(
+    {
+      method: c.req.method,
+      path: c.req.path,
+      userAgent: c.req.header('user-agent'),
+      ip: c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'unknown',
+    },
+    'Request started',
+  );
 
   await next();
 
-  const ms = Date.now() - start;
-  console.log(`[${requestId}] <-- ${c.req.method} ${c.req.path} ${c.res.status} ${ms}ms`);
+  // Log response
+  const duration = Date.now() - start;
+  const logLevel = c.res.status >= 400 ? 'warn' : duration > 1000 ? 'warn' : 'info';
+
+  logger[logLevel](
+    {
+      method: c.req.method,
+      path: c.req.path,
+      status: c.res.status,
+      duration,
+      slow: duration > 1000,
+    },
+    'Request completed',
+  );
 };

@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { logger } from '../lib/logger.js';
 
 /**
  * Get the package version from a package.json file
@@ -8,7 +9,7 @@ export function getPackageVersion(packageJsonPath: string): string {
     const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
     return packageJson.version;
   } catch (_error) {
-    console.warn(`Could not read package.json at ${packageJsonPath}, using fallback`);
+    logger.warn({ packageJsonPath }, 'Could not read package.json, using fallback version');
     return '0.0.0';
   }
 }

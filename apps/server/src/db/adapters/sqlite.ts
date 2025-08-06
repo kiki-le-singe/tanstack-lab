@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { BaseAdapter } from './base.js';
 import * as schema from '../schemas/sqlite.js';
+import { logger } from '../../lib/logger.js';
 
 type SqliteDatabase = ReturnType<typeof drizzle<typeof schema>>;
 
@@ -64,7 +65,7 @@ export class SqliteAdapter extends BaseAdapter<SqliteDatabase, typeof schema> {
       this._sqlite?.prepare('SELECT 1 as health').get();
       return true;
     } catch (error) {
-      console.error('SQLite health check failed:', error);
+      logger.error({ err: error, adapter: 'sqlite' }, 'SQLite database health check failed');
       return false;
     }
   }

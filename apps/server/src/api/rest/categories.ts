@@ -9,6 +9,7 @@ import {
   updateCategorySchema,
   uuidParamSchema,
 } from '@/schemas/validation.js';
+import { withRequestId } from '@/lib/logger.js';
 
 const categoryRoutes = new Hono();
 
@@ -30,7 +31,9 @@ categoryRoutes.get('/', zValidator('query', paginationSchema), async (c) => {
       hasMore: categoryList.length === limit,
     });
   } catch (error) {
-    console.error('Error fetching categories:', error);
+    const requestId = c.get('requestId') || 'unknown';
+    const logger = withRequestId(requestId);
+    logger.error({ err: error, operation: 'fetch-categories' }, 'Failed to fetch categories');
     return apiError(c, 'Could not retrieve categories from database', 500);
   }
 });
@@ -126,7 +129,9 @@ categoryRoutes.post('/', zValidator('json', createCategorySchema), async (c) => 
 
     return apiCreated(c, { category: newCategory });
   } catch (error) {
-    console.error('Error creating category:', error);
+    const requestId = c.get('requestId') || 'unknown';
+    const logger = withRequestId(requestId);
+    logger.error({ err: error, operation: 'create-category' }, 'Failed to create category');
     return c.json({ error: 'Failed to create category' }, 500);
   }
 });

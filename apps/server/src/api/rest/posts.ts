@@ -1,14 +1,15 @@
-import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { db, posts, comments } from '@/db/index.js';
+import { and, desc, eq } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { comments, db, posts } from '@/db/index.js';
+import { withRequestId } from '@/lib/logger.js';
 import {
   createPostSchema,
-  updatePostSchema,
-  uuidParamSchema,
   paginationSchema,
   postFiltersSchema,
+  updatePostSchema,
+  uuidParamSchema,
 } from '@/schemas/validation.js';
-import { eq, and, desc } from 'drizzle-orm';
 
 const postRoutes = new Hono();
 
@@ -30,7 +31,6 @@ postRoutes.get('/', zValidator('query', paginationSchema.merge(postFiltersSchema
       conditions.push(eq(posts.categoryId, categoryId));
     }
 
-    // Modern relational query - cleaner and more performant
     const postList = await db.query.posts.findMany({
       with: {
         author: {
@@ -63,7 +63,12 @@ postRoutes.get('/', zValidator('query', paginationSchema.merge(postFiltersSchema
       },
     });
   } catch (error) {
-    console.error('Error fetching posts:', error);
+    const requestId = c.get('requestId') || 'unknown';
+    const logger = withRequestId(requestId);
+    logger.error(
+      { err: error, operation: 'fetch-posts', filters: { published, authorId, categoryId } },
+      'Failed to fetch posts',
+    );
     return c.json({ error: 'Failed to fetch posts' }, 500);
   }
 });
@@ -112,7 +117,9 @@ postRoutes.get('/:id', zValidator('param', uuidParamSchema), async (c) => {
 
     return c.json({ post });
   } catch (error) {
-    console.error('Error fetching post:', error);
+    const requestId = c.get('requestId') || 'unknown';
+    const logger = withRequestId(requestId);
+    logger.error({ err: error, operation: 'fetch-post', postId: id }, 'Failed to fetch post');
     return c.json({ error: 'Failed to fetch post' }, 500);
   }
 });
@@ -126,7 +133,9 @@ postRoutes.post('/', zValidator('json', createPostSchema), async (c) => {
 
     return c.json({ post: newPost }, 201);
   } catch (error) {
-    console.error('Error creating post:', error);
+    const requestId = c.get('requestId') || 'unknown';
+    const logger = withRequestId(requestId);
+    logger.error({ err: error, operation: 'create-post', postData: body }, 'Failed to create post');
     return c.json({ error: 'Failed to create post' }, 500);
   }
 });
@@ -153,7 +162,12 @@ postRoutes.put(
 
       return c.json({ post: updatedPost });
     } catch (error) {
-      console.error('Error updating post:', error);
+      const requestId = c.get('requestId') || 'unknown';
+      const logger = withRequestId(requestId);
+      logger.error(
+        { err: error, operation: 'update-post', postId: id, updateData: body },
+        'Failed to update post',
+      );
       return c.json({ error: 'Failed to update post' }, 500);
     }
   },
@@ -172,7 +186,9 @@ postRoutes.delete('/:id', zValidator('param', uuidParamSchema), async (c) => {
 
     return c.json({ message: 'Post deleted successfully' });
   } catch (error) {
-    console.error('Error deleting post:', error);
+    const requestId = c.get('requestId') || 'unknown';
+    const logger = withRequestId(requestId);
+    logger.error({ err: error, operation: 'delete-post', postId: id }, 'Failed to delete post');
     return c.json({ error: 'Failed to delete post' }, 500);
   }
 });

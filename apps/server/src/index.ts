@@ -19,6 +19,7 @@ import {
 } from '@/lib/middleware.js';
 import { apiError, apiSuccess } from '@/lib/response.js';
 import { getPackageVersion } from '@/utils/index.js';
+import { logger, withTiming } from '@/lib/logger.js';
 
 // Create main Hono app
 const app = new Hono();
@@ -129,12 +130,15 @@ app.notFound((c) => {
 
 // Error handler
 app.onError((err, c) => {
-  console.error('Server error:', {
-    message: err.message,
-    stack: isDevelopment ? err.stack : undefined,
+  const requestId = c.get('requestId') || 'unknown';
+  
+  logger.error({
+    requestId,
+    err,
     path: c.req.path,
     method: c.req.method,
-  });
+    userAgent: c.req.header('user-agent'),
+  }, 'Server error occurred');
 
   return apiError(
     c,
@@ -150,25 +154,28 @@ async function startServer() {
 
   try {
     // Initialize database first
-    console.log(`🔄 Initializing database...`);
-    await initializeDatabase();
+    await withTiming(logger, 'database-initialization', () => initializeDatabase());
 
-    console.log(`🚀 Server starting on port ${port}...`);
-    console.log(`📊 REST API: http://localhost:${port}/api`);
-    console.log(`🔍 GraphQL: http://localhost:${port}/graphql`);
-    console.log(`💚 Health check: http://localhost:${port}/health`);
-    console.log(`🛡️  Security: Rate limiting, sanitization, security headers enabled`);
-
+    logger.info({ port }, 'Starting server');
+    
     const server = serve({
       fetch: app.fetch,
       port,
     });
 
-    console.log(`✅ Server running on http://localhost:${port}`);
+    logger.info({
+      port,
+      endpoints: {
+        rest: `/api`,
+        graphql: `/graphql`,
+        health: `/health`
+      },
+      features: ['rate-limiting', 'input-sanitization', 'security-headers', 'request-correlation']
+    }, 'Server started successfully');
 
     return server;
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    logger.fatal({ err: error }, 'Failed to start server');
     process.exit(1);
   }
 }
@@ -177,16 +184,16 @@ const server = await startServer();
 
 // Graceful shutdown handling
 const gracefulShutdown = (signal: string) => {
-  console.log(`\n🛑 Received ${signal}, shutting down gracefully...`);
+  logger.info({ signal }, 'Received shutdown signal, starting graceful shutdown');
 
   server.close(() => {
-    console.log('✅ Server closed successfully');
+    logger.info('Server closed successfully');
     process.exit(0);
   });
 
   // Force close after 10 seconds
   setTimeout(() => {
-    console.log('❌ Force closing server after timeout');
+    logger.warn('Force closing server after shutdown timeout');
     process.exit(1);
   }, 10000);
 };

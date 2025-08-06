@@ -26,6 +26,11 @@ const envSchema = z
     DATABASE_TYPE: z.enum(['neon', 'sqlite']).default('sqlite').describe('Database type to use'),
 
     DATABASE_URL: z.string().min(1, 'DATABASE_URL is required').describe('Database connection URL'),
+
+    LOG_LEVEL: z
+      .enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal'])
+      .optional()
+      .describe('Logging level'),
   })
   .refine(
     (data) => {

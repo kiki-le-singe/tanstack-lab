@@ -8,6 +8,7 @@ import {
   paginationSchema,
 } from '@/schemas/validation.js';
 import { eq, desc } from 'drizzle-orm';
+import { withRequestId } from '@/lib/logger.js';
 
 const commentRoutes = new Hono();
 
@@ -41,7 +42,9 @@ commentRoutes.get('/', zValidator('query', paginationSchema), async (c) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching comments:', error);
+    const requestId = c.get('requestId') || 'unknown';
+    const logger = withRequestId(requestId);
+    logger.error({ err: error, operation: 'fetch-comments' }, 'Failed to fetch comments');
     return c.json({ error: 'Failed to fetch comments' }, 500);
   }
 });
@@ -84,7 +87,9 @@ commentRoutes.post('/', zValidator('json', createCommentSchema), async (c) => {
 
     return c.json({ comment: newComment }, 201);
   } catch (error) {
-    console.error('Error creating comment:', error);
+    const requestId = c.get('requestId') || 'unknown';
+    const logger = withRequestId(requestId);
+    logger.error({ err: error, operation: 'create-comment' }, 'Failed to create comment');
     return c.json({ error: 'Failed to create comment' }, 500);
   }
 });
