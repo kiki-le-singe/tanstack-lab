@@ -135,7 +135,7 @@ postRoutes.post('/', zValidator('json', createPostSchema), async (c) => {
   } catch (error) {
     const requestId = c.get('requestId') || 'unknown';
     const logger = withRequestId(requestId);
-    logger.error({ err: error, operation: 'create-post', postData: body }, 'Failed to create post');
+    logger.error({ err: error, operation: 'create-post', postData }, 'Failed to create post');
     return c.json({ error: 'Failed to create post' }, 500);
   }
 });
@@ -165,7 +165,7 @@ postRoutes.put(
       const requestId = c.get('requestId') || 'unknown';
       const logger = withRequestId(requestId);
       logger.error(
-        { err: error, operation: 'update-post', postId: id, updateData: body },
+        { err: error, operation: 'update-post', postId: id, updateData },
         'Failed to update post',
       );
       return c.json({ error: 'Failed to update post' }, 500);

@@ -2,8 +2,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-import { getDatabase } from './index.js';
 import { logger, withTiming } from '../lib/logger.js';
+import { getDatabase } from './index.js';
 
 async function seed() {
   logger.info('Starting database seed operation');
@@ -14,7 +14,10 @@ async function seed() {
     const db = adapter.db; // Database instance from adapter
     const { users, categories, posts, comments } = adapter.schema;
 
-    logger.info({ database: { type: adapter.type, dialect: adapter.dialect } }, 'Database ready for seeding');
+    logger.info(
+      { database: { type: adapter.type, dialect: adapter.dialect } },
+      'Database ready for seeding',
+    );
 
     // Clear existing data (in reverse order due to foreign keys)
     await withTiming(logger, 'clear-existing-data', async () => {
@@ -138,7 +141,7 @@ async function seed() {
         .returning();
     });
 
-    const [post1, post2, post3, post4, post5, post6, post7] = postResults;
+    const [post1, post2, _post3, _post4, post5, _post6, post7] = postResults;
 
     // Seed comments
     await withTiming(logger, 'seed-comments', async () => {
@@ -161,7 +164,8 @@ async function seed() {
         },
         // Comments on post 2 (React Server Components)
         {
-          content: "Server Components are indeed fascinating. Can't wait to use them in production.",
+          content:
+            "Server Components are indeed fascinating. Can't wait to use them in production.",
           postId: post2.id,
           authorId: user3.id,
         },
@@ -196,15 +200,17 @@ async function seed() {
       ]);
     });
 
-    logger.info({
-      counts: {
-        users: userResults.length,
-        categories: categoryResults.length,
-        posts: postResults.length,
-        comments: 9
-      }
-    }, 'Database seeded successfully');
-
+    logger.info(
+      {
+        counts: {
+          users: userResults.length,
+          categories: categoryResults.length,
+          posts: postResults.length,
+          comments: 9,
+        },
+      },
+      'Database seeded successfully',
+    );
   } catch (error) {
     logger.fatal({ err: error }, 'Database seeding failed');
     process.exit(1);

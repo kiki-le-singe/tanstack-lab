@@ -109,7 +109,7 @@ userRoutes.post('/', zValidator('json', createUserSchema), async (c) => {
   } catch (error) {
     const requestId = c.get('requestId') || 'unknown';
     const logger = withRequestId(requestId);
-    logger.error({ err: error, operation: 'create-user', userData: body }, 'Failed to create user');
+    logger.error({ err: error, operation: 'create-user', userData }, 'Failed to create user');
     return apiError(c, 'Could not create user', 500);
   }
 });
@@ -139,7 +139,7 @@ userRoutes.put(
       const requestId = c.get('requestId') || 'unknown';
       const logger = withRequestId(requestId);
       logger.error(
-        { err: error, operation: 'update-user', userId: id, updateData: body },
+        { err: error, operation: 'update-user', userId: id, updateData },
         'Failed to update user',
       );
       return apiError(c, 'Could not update user', 500);

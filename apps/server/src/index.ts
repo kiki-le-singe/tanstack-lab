@@ -131,14 +131,17 @@ app.notFound((c) => {
 // Error handler
 app.onError((err, c) => {
   const requestId = c.get('requestId') || 'unknown';
-  
-  logger.error({
-    requestId,
-    err,
-    path: c.req.path,
-    method: c.req.method,
-    userAgent: c.req.header('user-agent'),
-  }, 'Server error occurred');
+
+  logger.error(
+    {
+      requestId,
+      err,
+      path: c.req.path,
+      method: c.req.method,
+      userAgent: c.req.header('user-agent'),
+    },
+    'Server error occurred',
+  );
 
   return apiError(
     c,
@@ -157,21 +160,29 @@ async function startServer() {
     await withTiming(logger, 'database-initialization', () => initializeDatabase());
 
     logger.info({ port }, 'Starting server');
-    
+
     const server = serve({
       fetch: app.fetch,
       port,
     });
 
-    logger.info({
-      port,
-      endpoints: {
-        rest: `/api`,
-        graphql: `/graphql`,
-        health: `/health`
+    logger.info(
+      {
+        port,
+        endpoints: {
+          rest: `/api`,
+          graphql: `/graphql`,
+          health: `/health`,
+        },
+        features: [
+          'rate-limiting',
+          'input-sanitization',
+          'security-headers',
+          'request-correlation',
+        ],
       },
-      features: ['rate-limiting', 'input-sanitization', 'security-headers', 'request-correlation']
-    }, 'Server started successfully');
+      'Server started successfully',
+    );
 
     return server;
   } catch (error) {
