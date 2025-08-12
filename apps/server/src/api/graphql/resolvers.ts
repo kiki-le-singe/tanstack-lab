@@ -90,20 +90,11 @@ export const resolvers = {
     // Users
     users: async (_: unknown, { page = 1, limit = 10 }: PaginationArgs) => {
       const offset = (page - 1) * limit;
-      const userList = await db.query.users.findMany({
+      return await db.query.users.findMany({
         limit,
         offset,
         orderBy: [users.createdAt],
       });
-
-      return {
-        users: userList,
-        pagination: {
-          page,
-          limit,
-          hasMore: userList.length === limit,
-        },
-      };
     },
 
     user: async (_: unknown, { id }: IdArgs) => {
@@ -115,20 +106,11 @@ export const resolvers = {
     // Categories
     categories: async (_: unknown, { page = 1, limit = 10 }: PaginationArgs) => {
       const offset = (page - 1) * limit;
-      const categoryList = await db.query.categories.findMany({
+      return await db.query.categories.findMany({
         limit,
         offset,
         orderBy: [categories.name],
       });
-
-      return {
-        categories: categoryList,
-        pagination: {
-          page,
-          limit,
-          hasMore: categoryList.length === limit,
-        },
-      };
     },
 
     category: async (_: unknown, { id }: IdArgs) => {
@@ -163,21 +145,12 @@ export const resolvers = {
         whereCondition = conditions.length > 0 ? and(...conditions) : undefined;
       }
 
-      const postList = await db.query.posts.findMany({
+      return await db.query.posts.findMany({
         where: whereCondition,
         limit,
         offset,
         orderBy: [desc(posts.createdAt)],
       });
-
-      return {
-        posts: postList,
-        pagination: {
-          page,
-          limit,
-          hasMore: postList.length === limit,
-        },
-      };
     },
 
     post: async (_: unknown, { id }: IdArgs) => {
@@ -191,40 +164,22 @@ export const resolvers = {
       { categoryId, page = 1, limit = 10 }: PostsByCategoryArgs,
     ) => {
       const offset = (page - 1) * limit;
-      const postList = await db.query.posts.findMany({
+      return await db.query.posts.findMany({
         where: eq(posts.categoryId, categoryId),
         limit,
         offset,
         orderBy: [desc(posts.createdAt)],
       });
-
-      return {
-        posts: postList,
-        pagination: {
-          page,
-          limit,
-          hasMore: postList.length === limit,
-        },
-      };
     },
 
     // Comments
     comments: async (_: unknown, { page = 1, limit = 10 }: PaginationArgs) => {
       const offset = (page - 1) * limit;
-      const commentList = await db.query.comments.findMany({
+      return await db.query.comments.findMany({
         limit,
         offset,
         orderBy: [desc(comments.createdAt)],
       });
-
-      return {
-        comments: commentList,
-        pagination: {
-          page,
-          limit,
-          hasMore: commentList.length === limit,
-        },
-      };
     },
 
     comment: async (_: unknown, { id }: IdArgs) => {
