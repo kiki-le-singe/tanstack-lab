@@ -14,7 +14,17 @@ The backend API server for the TanStack Lab project, built with modern tools and
 - **[tsup](https://tsup.egoist.dev/)** - Fast TypeScript bundler
 - **[Biome](https://biomejs.dev/)** - Fast linter and formatter
 
-## 🚀 Quick Start
+## ⚡ 30-Second Quick Start
+
+```bash
+# From project root
+cd apps/server
+cp .env.example .env
+pnpm db:push && pnpm db:seed && pnpm dev
+curl http://localhost:3001/health
+```
+
+## 🚀 Detailed Setup
 
 ### Prerequisites
 - Node.js 20+
@@ -30,63 +40,43 @@ The backend API server for the TanStack Lab project, built with modern tools and
 
 2. **Environment setup:**
    ```bash
-   # Create .env file
    cp .env.example .env
-   ```
-   
-   **Choose your database:**
-   
-   **Option A: SQLite (Recommended for development)**
-   ```bash
-   # .env
-   DATABASE_TYPE=sqlite
-   DATABASE_URL="file:./dev.db"
-   PORT=3001
-   NODE_ENV=development
-   ```
-   
-   **Option B: Neon PostgreSQL (Production)**
-   ```bash
-   # .env
-   DATABASE_TYPE=neon
-   DATABASE_URL="postgresql://user:pass@host.neon.tech/db?sslmode=require"
-   PORT=3001
-   NODE_ENV=development
+   # Edit .env - choose SQLite (zero config) or PostgreSQL
    ```
 
 3. **Database setup:**
    ```bash
-   # Generate migrations from schema
-   pnpm db:generate
-   
-   # Push schema to database
-   pnpm db:push
-   
-   # Seed with sample data
-   pnpm db:seed
+   pnpm db:push   # Apply schema changes to database
+   pnpm db:seed   # Add sample users, posts, and comments
    ```
 
 4. **Start development:**
    ```bash
    pnpm dev
+   # Or from root: pnpm dev --filter server
    ```
 
 ## 📋 Available Scripts
 
 ### Development
-- `pnpm dev` - Start development server with hot reloading
-- `pnpm build` - Build for production
-- `pnpm start` - Start production server
+```bash
+pnpm dev                    # Start development server with hot reloading
+pnpm build                  # Build for production
+pnpm start                  # Start production server
+```
 
 ### Database
-- `pnpm db:generate` - Generate migrations from schema changes
-- `pnpm db:push` - Push schema changes to database
-- `pnpm db:studio` - Open Drizzle Studio (database GUI)
-- `pnpm db:seed` - Seed database with sample data
+```bash
+pnpm db:generate            # Generate migrations from schema changes
+pnpm db:push                # Apply schema changes to database
+pnpm db:seed                # Add sample users, posts, and comments
+pnpm db:studio              # Open Drizzle Studio GUI
+```
 
 ### Utilities
-- `pnpm type-check` - Run TypeScript type checking
-- `pnpm lint` - Run linting (placeholder)
+```bash
+pnpm type-check             # TypeScript validation
+```
 
 ## 🌐 API Endpoints
 

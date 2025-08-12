@@ -7,8 +7,9 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { graphqlServer } from '@/api/graphql/index.js';
 import { restApi } from '@/api/rest/index.js';
-import { initializeDatabase, getDatabase } from '@/db/index.js';
+import { getDatabase, initializeDatabase } from '@/db/index.js';
 import { config, isDevelopment } from '@/lib/config.js';
+import { logger, withTiming } from '@/lib/logger.js';
 import {
   auth,
   createRateLimiter,
@@ -19,7 +20,6 @@ import {
 } from '@/lib/middleware.js';
 import { apiError, apiSuccess } from '@/lib/response.js';
 import { getPackageVersion } from '@/utils/index.js';
-import { logger, withTiming } from '@/lib/logger.js';
 
 // Create main Hono app
 const app = new Hono();

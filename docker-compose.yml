@@ -1,0 +1,70 @@
+# Modern Docker Compose setup for TanStack Lab
+# Provides both SQLite (default) and PostgreSQL options for easy development
+
+services:
+  # Main application service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${PORT:-3001}:3001"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3001
+      - DATABASE_TYPE=${DATABASE_TYPE:-}
+      - DATABASE_URL=${DATABASE_URL:-}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    env_file:
+      - apps/server/.env
+    networks:
+      - tanstack-lab
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Note: Project supports SQLite and Neon (serverless Postgres). No local Postgres service needed.
+
+  # Development service - for live development with hot reload
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${DEV_PORT:-3002}:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - DATABASE_TYPE=${DATABASE_TYPE:-}
+      - DATABASE_URL=${DATABASE_URL:-}
+      - LOG_LEVEL=debug
+      - CHOKIDAR_USEPOLLING=1
+    env_file:
+      - apps/server/.env
+    volumes:
+      # Mount source code for hot reload
+      - .:/app
+      - /app/node_modules
+      - /app/apps/server/node_modules
+    working_dir: /app
+    entrypoint: ["pnpm", "dev", "--filter=@tanstack-lab/server"]
+    networks:
+      - tanstack-lab
+    restart: unless-stopped
+
+volumes: {}
+
+networks:
+  tanstack-lab:
+    driver: bridge
+
+# Useful compose profiles for different scenarios
+# Usage examples:
+# - Default (SQLite): docker-compose up
+# - With PostgreSQL: DATABASE_TYPE=neon DATABASE_URL=postgresql://postgres:password@postgres:5432/tanstack_lab docker-compose up
+# - Development mode: docker-compose up dev
+# - Production mode: docker-compose --profile production up

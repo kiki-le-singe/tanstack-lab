@@ -1,76 +1,111 @@
 # 🚀 New Developer Onboarding
 
-Welcome to TanStack Lab! This guide will get you up and running in ~10 minutes.
+Welcome to TanStack Lab! Choose ONE path: Docker or Local. Each path is self-contained.
 
-## ✅ Prerequisites
+## ⚡ 30-Second Quick Start
 
-Before starting, ensure you have:
-- **Node.js 20+** - [Download here](https://nodejs.org/)
-- **pnpm 9+** - Install with `npm install -g pnpm`
-- **Git** - For version control
-- **Optional**: Neon connection string for production database (SQLite works out-of-the-box)
+**Docker (fastest):**
+```bash
+git clone <repo> && cd tanstack-lab
+cp apps/server/.env.example apps/server/.env
+DEV_PORT=3001 docker compose up --build dev
+open http://localhost:3001/health
+```
 
-## 🏁 Quick Start (5 steps)
+**Local:**
+```bash
+git clone <repo> && cd tanstack-lab
+pnpm install && cd apps/server && cp .env.example .env
+pnpm db:push && pnpm db:seed && pnpm dev
+open http://localhost:3001/health
+```
 
-### 1. **Clone & Install**
+## ✅ Choose your setup
+- Docker (quickest; no Node/pnpm required)
+- Local (Node/pnpm development)
+
+---
+
+## 🐳 Option A: Docker Quick Start (recommended)
+
+### Prerequisites
+- Docker Desktop (includes Compose)
+
+### 1) Clone the repo
 ```bash
 git clone <repository-url>
 cd tanstack-lab
+```
+
+### 2) Configure environment
+```bash
+cp apps/server/.env.example apps/server/.env
+# Edit apps/server/.env - choose ONE database:
+# SQLite (zero config): DATABASE_TYPE=sqlite
+# PostgreSQL: DATABASE_TYPE=neon + your connection URL
+```
+
+### 3) Run the server
+- Hot reload (bind mounts + tsx):
+```bash
+DEV_PORT=3001 docker compose up --build dev
+```
+- Self-contained (no hot reload):
+```bash
+docker compose up --build -d app
+docker compose logs -f app
+```
+
+### 4) Verify
+```bash
+open http://localhost:3001/health
+```
+
+Notes:
+- The self-contained `app` service runs migrations/seed on start.
+- The `dev` service is for live coding; it mounts your source. If you change schemas, run `pnpm db:push`/`pnpm db:seed` on your host or restart the service.
+
+---
+
+## 💻 Option B: Local Quick Start (Node/pnpm)
+
+### Prerequisites
+- Node.js 20+
+- pnpm 9+
+
+### 1) Install dependencies
+```bash
 pnpm install
 ```
 
-### 2. **Environment Setup**
+### 2) Configure environment
 ```bash
 cd apps/server
 cp .env.example .env
+# Edit .env - choose SQLite (zero config) or PostgreSQL
 ```
 
-**Choose your database:**
-
-**Option A: SQLite (Zero Config)**
+### 3) Set up the database
 ```bash
-# .env
-DATABASE_TYPE=sqlite
-DATABASE_URL="file:./dev.db"
-PORT=3001
-NODE_ENV=development
+pnpm db:push   # Create tables
+pnpm db:seed   # Load sample data
 ```
 
-**Option B: Neon PostgreSQL**
+### 4) Start development
 ```bash
-# First: Create free account at https://neon.tech
-# Copy connection string from your Neon project dashboard
-
-# .env  
-DATABASE_TYPE=neon
-DATABASE_URL="your-neon-connection-string"
-PORT=3001
-NODE_ENV=development
-```
-
-### 3. **Database Setup**
-```bash
-# Create database tables
-pnpm db:push
-
-# Load sample data (3 users, 7 posts, 9 comments)
-pnpm db:seed
-```
-
-### 4. **Start Development**
-```bash
-# Option A: Start everything (from root)
+# From root
 pnpm dev
 
-# Option B: Server only (from apps/server)
+# Or server only
 cd apps/server && pnpm dev
+# Or using turborepo (from root)
+pnpm dev --filter server
 ```
 
-### 5. **Verify Setup**
-Open these URLs in your browser:
-- **Health Check**: http://localhost:3001/health
-- **REST API**: http://localhost:3001/api/users
-- **GraphQL**: http://localhost:3001/graphql
+### 5) Verify
+```bash
+curl http://localhost:3001/health
+```
 
 ## 🧪 Test Commands
 
@@ -117,15 +152,16 @@ tanstack-lab/
 ```bash
 pnpm dev                     # Start everything
 cd apps/server && pnpm dev  # Server only
+pnpm dev --filter server     # Server only (turborepo)
 pnpm build                   # Build for production
 ```
 
 ### Database
 ```bash
-pnpm db:generate            # Generate migrations
-pnpm db:push                # Push schema to DB
-pnpm db:seed                # Seed sample data
-pnpm db:studio              # Open database GUI
+pnpm db:generate            # Generate migrations from schema changes
+pnpm db:push                # Apply schema changes to database
+pnpm db:seed                # Add sample users, posts, and comments
+pnpm db:studio              # Open Drizzle Studio GUI
 ```
 
 ### Utilities

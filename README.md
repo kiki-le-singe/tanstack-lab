@@ -23,7 +23,25 @@ This project is built as a **Turborepo monorepo** featuring:
 - **Database Client**: @tanstack/db
 - **Framework**: React + Vite
 
-## 🚀 Getting Started
+## ⚡ Quick Start (30 seconds)
+
+```bash
+# Choose your path:
+
+# Docker (fastest)
+git clone <repo> && cd tanstack-lab
+cp apps/server/.env.example apps/server/.env
+DEV_PORT=3001 docker compose up --build dev
+open http://localhost:3001/health
+
+# Local development
+git clone <repo> && cd tanstack-lab
+pnpm install && cd apps/server && cp .env.example .env
+pnpm db:push && pnpm db:seed && pnpm dev
+open http://localhost:3001/health
+```
+
+## 🚀 Detailed Setup
 
 ### Prerequisites
 - Node.js 20+
@@ -43,38 +61,13 @@ This project is built as a **Turborepo monorepo** featuring:
    ```bash
    cd apps/server
    cp .env.example .env
-   ```
-   
-   **Choose your database:**
-   
-   **Option A: SQLite (Zero Config)**
-   ```bash
-   # .env
-   DATABASE_TYPE=sqlite
-   DATABASE_URL="file:./dev.db"
-   PORT=3001
-   NODE_ENV=development
-   ```
-   
-   **Option B: Neon PostgreSQL**
-   ```bash
-   # First: Create free account at https://neon.tech
-   # Copy your connection string from Neon dashboard
-   
-   # .env
-   DATABASE_TYPE=neon
-   DATABASE_URL="your-neon-connection-string"
-   PORT=3001
-   NODE_ENV=development
+   # Edit .env - choose SQLite (zero config) or PostgreSQL
    ```
 
 3. **Set up the database:**
    ```bash
-   # Push schema to database (creates tables)
-   pnpm db:push
-   
-   # Seed with sample data (3 users, 7 posts, 9 comments)
-   pnpm db:seed
+   pnpm db:push   # Apply schema changes to database
+   pnpm db:seed   # Add sample users, posts, and comments
    ```
 
 4. **Start development server:**
@@ -84,7 +77,23 @@ This project is built as a **Turborepo monorepo** featuring:
    
    # Or just the server
    cd apps/server && pnpm dev
+   # Or using turborepo (from root)
+   pnpm dev --filter server
    ```
+
+### 🐳 Docker (optional)
+
+#### Dev (hot reload)
+```bash
+DEV_PORT=3001 docker compose up --build dev
+# then edit files under apps/server/src/** and tsx will hot reload
+```
+
+#### Self-contained (no hot reload)
+```bash
+docker compose up --build -d app
+docker compose logs -f app
+```
 
 The server will start on `http://localhost:3001` with the following endpoints:
 - **Health check**: http://localhost:3001/health
@@ -178,18 +187,21 @@ tanstack-lab/
 
 ## 🛠️ Available Scripts
 
-### Root Level
-- `pnpm dev` - Start all apps in development mode
-- `pnpm build` - Build all apps
-- `pnpm db:generate` - Generate database migrations
-- `pnpm db:push` - Push schema to database
-- `pnpm db:seed` - Seed database with sample data
+### Development
+```bash
+pnpm dev                     # Start everything
+cd apps/server && pnpm dev  # Server only
+pnpm dev --filter server     # Server only (turborepo)
+pnpm build                   # Build for production
+```
 
-### Server Level (`apps/server`)
-- `pnpm dev` - Start server with hot reloading
-- `pnpm build` - Build for production
-- `pnpm start` - Start production server
-- `pnpm db:studio` - Open Drizzle Studio
+### Database
+```bash
+pnpm db:generate            # Generate migrations from schema changes
+pnpm db:push                # Apply schema changes to database
+pnpm db:seed                # Add sample users, posts, and comments
+pnpm db:studio              # Open Drizzle Studio GUI
+```
 
 ## 🎯 Learning Goals
 

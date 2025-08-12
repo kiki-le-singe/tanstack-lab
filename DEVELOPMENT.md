@@ -1,6 +1,16 @@
 # Development Guide
 
-## Quick Commands
+## ⚡ Quick Start
+
+```bash
+# Get running in 30 seconds
+git clone <repo> && cd tanstack-lab
+pnpm install && cd apps/server && cp .env.example .env
+pnpm db:push && pnpm db:seed && pnpm dev
+curl http://localhost:3001/health
+```
+
+## 🛠️ Development Commands
 
 ### Server Development
 ```bash
@@ -9,12 +19,26 @@ pnpm dev
 
 # Server only
 cd apps/server && pnpm dev
+# Or using turborepo (from root)
+pnpm dev --filter server
 
 # Database operations
-pnpm db:generate  # Generate migrations
-pnpm db:push      # Push to database
-pnpm db:seed      # Seed sample data
-pnpm db:studio    # Open database GUI
+pnpm db:generate            # Generate migrations from schema changes
+pnpm db:push                # Apply schema changes to database
+pnpm db:seed                # Add sample users, posts, and comments
+pnpm db:studio              # Open Drizzle Studio GUI
+```
+
+### Docker Development (hot reload)
+```bash
+DEV_PORT=3001 docker compose up --build dev
+# Then edit files under apps/server/src/**; tsx will hot reload
+```
+
+### Docker (self-contained, no hot reload)
+```bash
+docker compose up --build -d app
+docker compose logs -f app
 ```
 
 ### Testing APIs
@@ -59,10 +83,10 @@ curl -X POST http://localhost:3001/graphql \
 ### Database Commands
 ```bash
 # Database operations (works with both SQLite and Neon)
-pnpm db:generate  # Generate migrations
-pnpm db:push      # Push schema to database
-pnpm db:seed      # Seed sample data
-pnpm db:studio    # Open Drizzle Studio GUI
+pnpm db:generate            # Generate migrations from schema changes
+pnpm db:push                # Apply schema changes to database
+pnpm db:seed                # Add sample users, posts, and comments
+pnpm db:studio              # Open Drizzle Studio GUI
 ```
 
 ### Switching Databases
