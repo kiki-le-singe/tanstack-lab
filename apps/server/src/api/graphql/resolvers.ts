@@ -1,4 +1,4 @@
-import { and, desc, eq, type SQL } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, or, type SQL } from 'drizzle-orm';
 import { GraphQLScalarType } from 'graphql';
 import { Kind } from 'graphql/language/index.js';
 import { categories, comments, db, posts, users } from '@/db/index.js';
@@ -32,6 +32,33 @@ import type {
   UpdateUserArgs,
   User,
 } from './types.js';
+
+// Helper function for proper pagination
+async function createPaginationInfo<T>(
+  query: () => Promise<T[]>,
+  countQuery: () => Promise<number>,
+  page: number,
+  limit: number
+): Promise<{ items: T[]; pagination: { page: number; limit: number; hasMore: boolean; total: number } }> {
+  const offset = (page - 1) * limit;
+  
+  // Query one extra item to check if there are more results
+  const items = await query();
+  const total = await countQuery();
+  
+  // If we got more items than requested, there are more pages
+  const hasMore = offset + limit < total;
+  
+  return {
+    items,
+    pagination: {
+      page,
+      limit,
+      hasMore,
+      total,
+    },
+  };
+}
 
 // Custom DateTime scalar
 const DateTimeScalar = new GraphQLScalarType({
@@ -97,6 +124,26 @@ export const resolvers = {
       });
     },
 
+    usersWithPagination: async (_: unknown, { page = 1, limit = 10 }: PaginationArgs) => {
+      const offset = (page - 1) * limit;
+      
+      const result = await createPaginationInfo(
+        () => db.query.users.findMany({
+          limit,
+          offset,
+          orderBy: [users.createdAt],
+        }),
+        () => db.select({ count: count() }).from(users).then(result => result[0].count),
+        page,
+        limit
+      );
+
+      return {
+        users: result.items,
+        pagination: result.pagination,
+      };
+    },
+
     user: async (_: unknown, { id }: IdArgs) => {
       return await db.query.users.findFirst({
         where: eq(users.id, id),
@@ -111,6 +158,24 @@ export const resolvers = {
         offset,
         orderBy: [categories.name],
       });
+    },
+
+    categoriesWithPagination: async (_: unknown, { page = 1, limit = 10 }: PaginationArgs) => {
+      const offset = (page - 1) * limit;
+      const categoryList = await db.query.categories.findMany({
+        limit,
+        offset,
+        orderBy: [categories.name],
+      });
+
+      return {
+        categories: categoryList,
+        pagination: {
+          page,
+          limit,
+          hasMore: categoryList.length === limit,
+        },
+      };
     },
 
     category: async (_: unknown, { id }: IdArgs) => {
@@ -142,6 +207,15 @@ export const resolvers = {
         if (filters.categoryId) {
           conditions.push(eq(posts.categoryId, filters.categoryId));
         }
+        if (filters.search) {
+          // Search in title and content
+          conditions.push(
+            or(
+              ilike(posts.title, `%${filters.search}%`),
+              ilike(posts.content, `%${filters.search}%`)
+            )
+          );
+        }
         whereCondition = conditions.length > 0 ? and(...conditions) : undefined;
       }
 
@@ -151,6 +225,52 @@ export const resolvers = {
         offset,
         orderBy: [desc(posts.createdAt)],
       });
+    },
+
+    postsWithPagination: async (_: unknown, { page = 1, limit = 10, filters }: PostsArgs) => {
+      const offset = (page - 1) * limit;
+
+      // Build where condition for relational API
+      let whereCondition: SQL | undefined;
+      if (filters) {
+        const conditions = [];
+        if (filters.published !== undefined) {
+          conditions.push(eq(posts.published, filters.published));
+        }
+        if (filters.authorId) {
+          conditions.push(eq(posts.authorId, filters.authorId));
+        }
+        if (filters.categoryId) {
+          conditions.push(eq(posts.categoryId, filters.categoryId));
+        }
+        if (filters.search) {
+          // Search in title and content
+          conditions.push(
+            or(
+              ilike(posts.title, `%${filters.search}%`),
+              ilike(posts.content, `%${filters.search}%`)
+            )
+          );
+        }
+        whereCondition = conditions.length > 0 ? and(...conditions) : undefined;
+      }
+
+      const result = await createPaginationInfo(
+        () => db.query.posts.findMany({
+          where: whereCondition,
+          limit,
+          offset,
+          orderBy: [desc(posts.createdAt)],
+        }),
+        () => db.select({ count: count() }).from(posts).where(whereCondition || eq(posts.id, posts.id)).then(result => result[0].count),
+        page,
+        limit
+      );
+
+      return {
+        posts: result.items,
+        pagination: result.pagination,
+      };
     },
 
     post: async (_: unknown, { id }: IdArgs) => {
@@ -182,6 +302,24 @@ export const resolvers = {
       });
     },
 
+    commentsWithPagination: async (_: unknown, { page = 1, limit = 10 }: PaginationArgs) => {
+      const offset = (page - 1) * limit;
+      const commentList = await db.query.comments.findMany({
+        limit,
+        offset,
+        orderBy: [desc(comments.createdAt)],
+      });
+
+      return {
+        comments: commentList,
+        pagination: {
+          page,
+          limit,
+          hasMore: commentList.length === limit,
+        },
+      };
+    },
+
     comment: async (_: unknown, { id }: IdArgs) => {
       return await db.query.comments.findFirst({
         where: eq(comments.id, id),
@@ -207,7 +345,7 @@ export const resolvers = {
         .returning();
 
       if (!updatedUser) {
-        throw new Error('User not found');
+        throw new Error(`User with ID ${id} not found`);
       }
 
       return updatedUser;
@@ -312,25 +450,43 @@ export const resolvers = {
 
   // Optimized field resolvers using relational queries
   User: {
-    posts: async (parent: User) => {
+    posts: async (parent: User, _args: unknown, _context: unknown, info: any) => {
+      // Check if posts are already loaded via 'with' in the parent query
+      if (parent.posts && Array.isArray(parent.posts)) {
+        return parent.posts;
+      }
+
+      // Dynamically include relations based on GraphQL selection
+      const includeCategory = info.fieldNodes[0].selectionSet?.selections.some(
+        (sel: any) => sel.name?.value === 'category'
+      );
+
       return await db.query.posts.findMany({
         where: eq(posts.authorId, parent.id),
         orderBy: [desc(posts.createdAt)],
-        with: {
-          category: true, // Include category data in case it's requested
-        },
+        with: includeCategory ? { category: true } : undefined,
       });
     },
 
-    comments: async (parent: User) => {
+    comments: async (parent: User, _args: unknown, _context: unknown, info: any) => {
+      // Check if comments are already loaded
+      if (parent.comments && Array.isArray(parent.comments)) {
+        return parent.comments;
+      }
+
+      // Dynamically include relations based on GraphQL selection
+      const includePost = info.fieldNodes[0].selectionSet?.selections.some(
+        (sel: any) => sel.name?.value === 'post'
+      );
+
       return await db.query.comments.findMany({
         where: eq(comments.authorId, parent.id),
         orderBy: [desc(comments.createdAt)],
-        with: {
+        with: includePost ? {
           post: {
-            columns: { id: true, title: true }, // Basic post info
+            columns: { id: true, title: true },
           },
-        },
+        } : undefined,
       });
     },
   },

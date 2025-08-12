@@ -1,11 +1,28 @@
 export const typeDefs = /* GraphQL */ `
   scalar DateTime
 
+  interface Error {
+    message: String!
+    code: String!
+  }
+
+  type NotFoundError implements Error {
+    message: String!
+    code: String!
+  }
+
+  type ValidationError implements Error {
+    message: String!
+    code: String!
+    field: String
+  }
+
   type User {
     id: ID!
     name: String!
     avatarUrl: String
     createdAt: DateTime!
+    updatedAt: DateTime!
     posts: [Post!]!
     comments: [Comment!]!
   }
@@ -23,6 +40,7 @@ export const typeDefs = /* GraphQL */ `
     content: String!
     published: Boolean!
     createdAt: DateTime!
+    updatedAt: DateTime!
     author: User!
     category: Category!
     comments: [Comment!]!
@@ -32,6 +50,7 @@ export const typeDefs = /* GraphQL */ `
     id: ID!
     content: String!
     createdAt: DateTime!
+    updatedAt: DateTime!
     post: Post!
     author: User!
   }
@@ -40,6 +59,7 @@ export const typeDefs = /* GraphQL */ `
     page: Int!
     limit: Int!
     hasMore: Boolean!
+    total: Int!
   }
 
   type PostsConnection {
@@ -112,25 +132,41 @@ export const typeDefs = /* GraphQL */ `
     authorId: ID
     categoryId: ID
     categorySlug: String
+    search: String
+  }
+
+  enum PostSortBy {
+    CREATED_AT
+    UPDATED_AT
+    TITLE
+  }
+
+  enum SortDirection {
+    ASC
+    DESC
   }
 
   type Query {
     # Users
-    users(page: Int = 1, limit: Int = 10): UsersConnection!
+    users(page: Int = 1, limit: Int = 10): [User!]!
+    usersWithPagination(page: Int = 1, limit: Int = 10): UsersConnection!
     user(id: ID!): User
     
     # Categories
-    categories(page: Int = 1, limit: Int = 10): CategoriesConnection!
+    categories(page: Int = 1, limit: Int = 10): [Category!]!
+    categoriesWithPagination(page: Int = 1, limit: Int = 10): CategoriesConnection!
     category(id: ID!): Category
     categoryBySlug(slug: String!): Category
     
     # Posts
-    posts(page: Int = 1, limit: Int = 10, filters: PostFilters): PostsConnection!
+    posts(page: Int = 1, limit: Int = 10, filters: PostFilters, sortBy: PostSortBy = CREATED_AT, sortDirection: SortDirection = DESC): [Post!]!
+    postsWithPagination(page: Int = 1, limit: Int = 10, filters: PostFilters, sortBy: PostSortBy = CREATED_AT, sortDirection: SortDirection = DESC): PostsConnection!
     post(id: ID!): Post
-    postsByCategory(categoryId: ID!, page: Int = 1, limit: Int = 10): PostsConnection!
+    postsByCategory(categoryId: ID!, page: Int = 1, limit: Int = 10): [Post!]!
     
     # Comments
-    comments(page: Int = 1, limit: Int = 10): CommentsConnection!
+    comments(page: Int = 1, limit: Int = 10): [Comment!]!
+    commentsWithPagination(page: Int = 1, limit: Int = 10): CommentsConnection!
     comment(id: ID!): Comment
   }
 
