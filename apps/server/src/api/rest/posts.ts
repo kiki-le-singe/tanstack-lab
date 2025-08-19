@@ -9,7 +9,7 @@ import {
   postFiltersSchema,
   updatePostSchema,
   uuidParamSchema,
-} from '@/schemas/validation.js';
+} from '@tanstack-lab/shared';
 
 const postRoutes = new Hono();
 

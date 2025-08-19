@@ -11,7 +11,7 @@ import {
   updateCommentSchema,
   updatePostSchema,
   updateUserSchema,
-} from '@/schemas/validation.js';
+} from '@tanstack-lab/shared';
 import type {
   Category,
   Comment,

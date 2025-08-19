@@ -6,7 +6,7 @@ import {
   updateCommentSchema,
   uuidParamSchema,
   paginationSchema,
-} from '@/schemas/validation.js';
+} from '@tanstack-lab/shared';
 import { eq, desc } from 'drizzle-orm';
 import { withRequestId } from '@/lib/logger.js';
 

@@ -8,7 +8,7 @@ import type {
   UpdateComment,
   UpdatePost,
   UpdateUser,
-} from '@/schemas/validation.js';
+} from '@tanstack-lab/shared';
 
 // Database entity types (inferred from Drizzle schema)
 export interface User {

@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.3",
+    "@tanstack-lab/shared": "workspace:*",
     "@tanstack/react-router": "^1.131.27",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

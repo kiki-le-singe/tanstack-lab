@@ -8,7 +8,7 @@ import {
   paginationSchema,
   updateCategorySchema,
   uuidParamSchema,
-} from '@/schemas/validation.js';
+} from '@tanstack-lab/shared';
 import { withRequestId } from '@/lib/logger.js';
 
 const categoryRoutes = new Hono();

@@ -15,7 +15,7 @@ import {
   paginationSchema,
   updateUserSchema,
   uuidParamSchema,
-} from '@/schemas/validation.js';
+} from '@tanstack-lab/shared';
 
 const userRoutes = new Hono();
 
